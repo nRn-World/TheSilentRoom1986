@@ -1,4 +1,4 @@
-﻿/**
+/**
  * @license
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -19,6 +19,9 @@ import GameLoop from './game/GameLoop';
 import TypingInput from './game/TypingInput';
 import UpgradeSystem from './game/UpgradeSystem';
 import SettingsMenu from './game/SettingsMenu';
+import BossSystem from './game/BossSystem';
+import InventorySystem from './game/InventorySystem';
+import MultiplayerSystem from './game/MultiplayerSystem';
 import { loadGameState, saveGameState, defaultGameState } from '../utils/persistence';
 
 function cn(...inputs: ClassValue[]) {
@@ -117,6 +120,10 @@ const TRANSLATIONS: Record<Language, { ui: Record<string, string>, chapters: Cha
       upgrade: "Upgrade",
       chapter: "Chapter",
       forbidden: "Classified File",
+      inventory: "Inventory",
+      shop: "Shop",
+      boss: "Boss",
+      multiplayer: "Multiplayer",
       audio: "Audio",
       active: "Active",
       initAudio: "Click to enable",
@@ -187,6 +194,10 @@ const TRANSLATIONS: Record<Language, { ui: Record<string, string>, chapters: Cha
       upgrade: "Uppgradera",
       chapter: "Kapitel",
       forbidden: "Klassificerad fil",
+      inventory: "Förråd",
+      shop: "Butik",
+      boss: "Boss",
+      multiplayer: "Flerspelarläge",
       audio: "Ljud",
       active: "Aktivt",
       initAudio: "Klicka för att aktivera",
@@ -250,6 +261,10 @@ const TRANSLATIONS: Record<Language, { ui: Record<string, string>, chapters: Cha
       upgrade: "Geliştir",
       chapter: "Bölüm",
       forbidden: "Gizli Dosya",
+      inventory: "Envanter",
+      shop: "Market",
+      boss: "Patron",
+      multiplayer: "Çoklu Oyuncu",
       audio: "Ses",
       active: "Aktif",
       initAudio: "Etkinleştirmek için tıkla",
@@ -335,7 +350,7 @@ function Game() {
   const [typedText, setTypedText] = useState("");
   const [manifestations, setManifestations] = useState<Manifestation[]>([]);
   const [enemies, setEnemies] = useState<Enemy[]>([]);
-  const [gameState, setGameState] = useState<'narrative' | 'playing' | 'gameover' | 'victory' | 'upgrading' | 'settings'>('narrative');
+  const [gameState, setGameState] = useState<'narrative' | 'playing' | 'gameover' | 'victory' | 'upgrading' | 'settings' | 'inventory' | 'shop' | 'boss' | 'multiplayer'>('narrative');
   const [shake, setShake] = useState(0);
   const [isHeavy, setIsHeavy] = useState(false);
   const [isCold, setIsCold] = useState(false);
@@ -368,7 +383,30 @@ function Game() {
     screenEffects: true,
     colorBlindMode: false
   });
+  const [accessibilitySettings, setAccessibilitySettings] = useState({
+    reducedMotion: false,
+    highContrast: false
+  });
   
+  // Load settings from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedAudio = localStorage.getItem('tsr_audio');
+      const savedGraphics = localStorage.getItem('tsr_graphics');
+      const savedAccessibility = localStorage.getItem('tsr_accessibility');
+      if (savedAudio) setAudioSettings(JSON.parse(savedAudio));
+      if (savedGraphics) setGraphicsSettings(JSON.parse(savedGraphics));
+      if (savedAccessibility) setAccessibilitySettings(JSON.parse(savedAccessibility));
+    } catch (e) {
+      console.warn('Could not load settings', e);
+    }
+  }, []);
+  
+  const t = TRANSLATIONS[lang];
+  const chapter = t.chapters[chapterIndex];
+  const level = chapterIndex + 1;
+  const rank = chapterIndex + 1;
+
   // Language change - reset typed text
   useEffect(() => {
     setTypedText("");
@@ -428,6 +466,13 @@ function Game() {
     }
   }, [gameState, chapter.id, initAudio]);
 
+  // Apply background music volume settings
+  useEffect(() => {
+    if (bgAudioRef.current) {
+      bgAudioRef.current.volume = audioSettings.masterVolume * audioSettings.musicVolume;
+    }
+  }, [audioSettings.masterVolume, audioSettings.musicVolume]);
+
   // listen for first user interaction to unlock autoplay restrictions
   useEffect(() => {
     const onFirstClick = () => {
@@ -446,6 +491,9 @@ function Game() {
   const playSound = useCallback((type: 'click' | 'bell' | 'backspace' | 'glitch' | 'siren' | 'thunder') => {
     const ctx = initAudio();
     const now = ctx.currentTime;
+    const sfxVol = audioSettings.masterVolume * audioSettings.sfxVolume;
+
+    if (sfxVol <= 0) return;
 
     if (type === 'click') {
       const osc = ctx.createOscillator();
@@ -453,8 +501,8 @@ function Game() {
       osc.type = 'triangle';
       osc.frequency.setValueAtTime(150 + Math.random() * 50, now);
       osc.frequency.exponentialRampToValueAtTime(40, now + 0.06);
-      gain.gain.setValueAtTime(0.08, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+      gain.gain.setValueAtTime(0.08 * sfxVol, now);
+      gain.gain.exponentialRampToValueAtTime(0.001 * sfxVol, now + 0.06);
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start(now);
@@ -464,8 +512,8 @@ function Game() {
       const gain = ctx.createGain();
       osc.type = 'sine';
       osc.frequency.setValueAtTime(1200, now);
-      gain.gain.setValueAtTime(0.15, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+      gain.gain.setValueAtTime(0.15 * sfxVol, now);
+      gain.gain.exponentialRampToValueAtTime(0.001 * sfxVol, now + 0.6);
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start(now);
@@ -475,8 +523,8 @@ function Game() {
       const gain = ctx.createGain();
       osc.type = 'sawtooth';
       osc.frequency.setValueAtTime(80, now);
-      gain.gain.setValueAtTime(0.05, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+      gain.gain.setValueAtTime(0.05 * sfxVol, now);
+      gain.gain.exponentialRampToValueAtTime(0.001 * sfxVol, now + 0.1);
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start(now);
@@ -487,7 +535,7 @@ function Game() {
       osc.type = 'square';
       osc.frequency.setValueAtTime(20, now);
       osc.frequency.linearRampToValueAtTime(100, now + 0.2);
-      gain.gain.setValueAtTime(0.05, now);
+      gain.gain.setValueAtTime(0.05 * sfxVol, now);
       gain.gain.linearRampToValueAtTime(0, now + 0.2);
       osc.connect(gain);
       gain.connect(ctx.destination);
@@ -500,8 +548,8 @@ function Game() {
       osc.frequency.setValueAtTime(620, now);
       osc.frequency.linearRampToValueAtTime(980, now + 0.8);
       osc.frequency.linearRampToValueAtTime(620, now + 1.6);
-      gain.gain.setValueAtTime(0.06, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 1.6);
+      gain.gain.setValueAtTime(0.06 * sfxVol, now);
+      gain.gain.exponentialRampToValueAtTime(0.001 * sfxVol, now + 1.6);
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start(now);
@@ -512,16 +560,15 @@ function Game() {
       osc.type = 'sawtooth';
       osc.frequency.setValueAtTime(80, now);
       osc.frequency.exponentialRampToValueAtTime(30, now + 0.7);
-      gain.gain.setValueAtTime(0.08, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
+      gain.gain.setValueAtTime(0.08 * sfxVol, now);
+      gain.gain.exponentialRampToValueAtTime(0.001 * sfxVol, now + 0.7);
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start(now);
       osc.stop(now + 0.7);
     }
-  }, [initAudio]);
+  }, [initAudio, audioSettings.masterVolume, audioSettings.sfxVolume]);
 
-  // Handle Manifestations
   const pulseState = (setter: React.Dispatch<React.SetStateAction<boolean>>, duration: number) => {
     setter(true);
     setTimeout(() => setter(false), duration);
@@ -800,22 +847,22 @@ function Game() {
             <motion.div 
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-black/90 p-10 border border-white/10 backdrop-blur-xl rounded-2xl shadow-2xl max-w-2xl mx-auto"
+              className="bg-black/90 p-8 border border-white/10 backdrop-blur-xl rounded-2xl shadow-2xl max-w-3xl w-full mx-auto"
             >
-              <div className="flex items-center gap-4 mb-8">
-                <BookOpen className="w-10 h-10 text-[#f27d26]" />
-                <h2 className="text-2xl font-display uppercase italic text-white">{chapter.goal}</h2>
+              <div className="flex items-center gap-4 mb-6">
+                <BookOpen className="w-8 h-8 text-[#f27d26] shrink-0" />
+                <h2 className="text-xl font-display uppercase italic text-white leading-tight">{chapter.goal}</h2>
               </div>
-              <p className="text-xl leading-relaxed opacity-80 mb-10 font-light">
+              <p className="text-base leading-relaxed opacity-80 mb-8 font-light">
                 {chapter.id === 1 ? (lang === 'sv' ? "Staden sover, men brottet vilar aldrig. Din skrivmaskin är ditt enda vittne." : lang === 'tr' ? "Şehir uyuyor ama suç asla dinlenmez. Daktilon senin tek tanığın." : "The city sleeps, but crime never rests. Your typewriter is your only witness.") : (lang === 'sv' ? "Sanningen kommer fram, bokstav för bokstav." : lang === 'tr' ? "Gerçek ortaya çıkıyor, harf harf." : "The truth emerges, letter by letter.")}
-                <span className="block mt-4 text-[#f27d26] font-bold italic">
-                  "{lang === 'sv' ? "Bläcket ljuger aldrig." : lang === 'tr' ? "Mürekkep asla yalan söylemez." : "The ink never lies."}"
+                <span className="block mt-3 text-[#f27d26] font-bold italic">
+                  &ldquo;{lang === 'sv' ? 'Bläcket ljuger aldrig.' : lang === 'tr' ? 'Mürekkep asla yalan söylemez.' : 'The ink never lies.'}&rdquo;
                 </span>
               </p>
-              <div className="flex gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <button 
                   onClick={startChapter}
-                  className="group relative flex-1 px-8 py-5 bg-[#f27d26] text-black font-black uppercase tracking-[0.2em] overflow-hidden rounded-lg hover:bg-white transition-all"
+                  className="group relative col-span-2 sm:col-span-3 px-6 py-4 bg-[#f27d26] text-black font-black uppercase tracking-widest text-sm overflow-hidden rounded-lg hover:bg-white transition-all"
                 >
                   <span className="relative z-10">{t.ui.initialize}</span>
                   <div className="absolute inset-0 bg-white translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
@@ -823,20 +870,51 @@ function Game() {
                 {chapterIndex > 0 && (
                   <button 
                     onClick={() => setGameState('upgrading')}
-                    className="px-8 py-5 bg-white/10 text-white font-black uppercase tracking-[0.2em] rounded-lg hover:bg-white/20 transition-all"
+                    className="px-4 py-3 bg-white/10 text-white font-bold uppercase tracking-widest text-xs rounded-lg hover:bg-white/20 transition-all"
                   >
                     {t.ui.upgrades}
                   </button>
                 )}
+                {chapterIndex > 0 && (
+                  <button 
+                    onClick={() => setGameState('inventory')}
+                    className="px-4 py-3 bg-white/10 text-white font-bold uppercase tracking-widest text-xs rounded-lg hover:bg-white/20 transition-all"
+                  >
+                    {t.ui.inventory}
+                  </button>
+                )}
+                {chapterIndex > 0 && (
+                  <button 
+                    onClick={() => setGameState('shop')}
+                    className="px-4 py-3 bg-white/10 text-white font-bold uppercase tracking-widest text-xs rounded-lg hover:bg-white/20 transition-all"
+                  >
+                    {t.ui.shop}
+                  </button>
+                )}
+                {chapterIndex > 0 && (
+                  <button 
+                    onClick={() => setGameState('boss')}
+                    className="px-4 py-3 bg-red-500/20 text-red-400 font-bold uppercase tracking-widest text-xs rounded-lg hover:bg-red-500/30 transition-all"
+                  >
+                    {t.ui.boss}
+                  </button>
+                )}
+                <button 
+                  onClick={() => setGameState('multiplayer')}
+                  className="px-4 py-3 bg-blue-500/20 text-blue-400 font-bold uppercase tracking-widest text-xs rounded-lg hover:bg-blue-500/30 transition-all"
+                >
+                  {t.ui.multiplayer}
+                </button>
                 <button 
                   onClick={() => setGameState('settings')}
-                  className="px-8 py-5 bg-white/10 text-white font-black uppercase tracking-[0.2em] rounded-lg hover:bg-white/20 transition-all"
+                  className="px-4 py-3 bg-white/10 text-white font-bold uppercase tracking-widest text-xs rounded-lg hover:bg-white/20 transition-all"
                 >
-                  ⚙️
+                  ⚙️ {lang === 'sv' ? 'Inställningar' : lang === 'tr' ? 'Ayarlar' : 'Settings'}
                 </button>
               </div>
             </motion.div>
           )}
+
 
           {gameState === 'upgrading' && (
             <UpgradeSystem
@@ -855,10 +933,44 @@ function Game() {
               gameState={gameState}
               setGameState={setGameState}
               t={t}
+              lang={lang}
               audioSettings={audioSettings}
               setAudioSettings={setAudioSettings}
               graphicsSettings={graphicsSettings}
               setGraphicsSettings={setGraphicsSettings}
+              accessibilitySettings={accessibilitySettings}
+              setAccessibilitySettings={setAccessibilitySettings}
+            />
+          )}
+
+          {(gameState === 'inventory' || gameState === 'shop') && (
+            <InventorySystem
+              gameState={gameState}
+              setGameState={setGameState}
+              revolutionPoints={revolutionPoints}
+              setRevolutionPoints={setRevolutionPoints}
+              t={t}
+            />
+          )}
+
+          {gameState === 'boss' && (
+            <BossSystem
+              gameState={gameState}
+              setGameState={setGameState}
+              chapterIndex={chapterIndex}
+              typedText={typedText}
+              revolutionPoints={revolutionPoints}
+              setRevolutionPoints={setRevolutionPoints}
+              t={t}
+            />
+          )}
+
+          {gameState === 'multiplayer' && (
+            <MultiplayerSystem
+              gameState={gameState}
+              setGameState={setGameState}
+              t={t}
+              lang={lang}
             />
           )}
 

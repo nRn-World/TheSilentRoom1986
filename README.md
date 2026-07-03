@@ -26,12 +26,17 @@ Uncover the truth behind Case #402 in this atmospheric mystery adventure.
 
 ## 🎯 Features
 
-- **6 Chapters** of noir storytelling
+- **15 Chapters** of noir storytelling (9 new chapters added!)
 - **3 Languages**: English, Swedish, and Turkish
 - **Retro CRT Aesthetic** with scanlines and glitch effects
 - **Atmospheric Soundtrack** with chapter-specific music
 - **Typewriter Mechanics** - type words to trigger manifestations
 - **Upgrade System** - enhance your detective's abilities
+- **Boss Fight System** - face 5 unique bosses with multi-phase battles
+- **Inventory System** - collect and equip weapons, armor, and accessories
+- **Item Shop** - purchase powerful items to aid your investigation
+- **Multiplayer Mode** - play with friends in Co-op, Versus, or Race modes
+- **New Manifestation Powers** - shadow, memory, void, echo, and destiny
 - **Multiple Endings** - discover the truth
 
 ---
@@ -41,8 +46,11 @@ Uncover the truth behind Case #402 in this atmospheric mystery adventure.
 1. **Start the Investigation** - Click "Start Investigation" to begin
 2. **Type Words** - Type the highlighted words from the story to manifest powers
 3. **Fight Enemies** - Use your manifestations to defeat enemies
-4. **Upgrade** - Collect points to upgrade your typewriter
-5. **Solve the Case** - Uncover the truth in 6 chapters
+4. **Face Bosses** - Battle unique bosses at the end of chapters
+5. **Upgrade** - Collect points to upgrade your typewriter
+6. **Collect Items** - Find and equip powerful items
+7. **Play Multiplayer** - Compete or cooperate with friends
+8. **Solve the Case** - Uncover the truth in 15 chapters
 
 ### Manifestation Powers
 
@@ -54,6 +62,11 @@ Uncover the truth behind Case #402 in this atmospheric mystery adventure.
 | ghost | Summon ghosts |
 | shield | Temporary protection |
 | time | Slow down time |
+| shadow | Shadow manipulation |
+| memory | Memory powers |
+| void | Void energy |
+| echo | Sound manipulation |
+| destiny | Fate control |
 
 ---
 
@@ -65,6 +78,7 @@ Uncover the truth behind Case #402 in this atmospheric mystery adventure.
 - **Motion** - Animations
 - **TypeScript** - Type safety
 - **Canvas Confetti** - Visual effects
+- **WebSocket** - Multiplayer communication
 
 ---
 

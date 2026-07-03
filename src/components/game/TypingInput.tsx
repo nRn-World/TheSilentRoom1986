@@ -2,7 +2,7 @@ import React, { useEffect, useCallback } from 'react';
 import { useState } from 'react';
 
 interface TypingInputProps {
-  gameState: 'narrative' | 'playing' | 'gameover' | 'victory' | 'upgrading';
+  gameState: 'narrative' | 'playing' | 'gameover' | 'victory' | 'upgrading' | 'settings' | 'inventory' | 'shop' | 'boss' | 'multiplayer';
   typedText: string;
   setTypedText: React.Dispatch<React.SetStateAction<string>>;
   chapter: any;

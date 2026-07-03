@@ -7,6 +7,18 @@ import confetti from 'canvas-confetti';
 // Import types and constants from parent component
 // These will be passed as props initially, later we might move them to a shared types file
 
+interface Enemy {
+  id: string;
+  type: 'standard' | 'heavy' | 'censor' | 'infiltrator';
+  x: number;
+  y: number;
+  health: number;
+  maxHealth: number;
+  speed: number;
+  state: 'marching' | 'stunned' | 'retreating';
+  shielded?: boolean;
+}
+
 interface GameLoopProps {
   lang: 'en' | 'sv' | 'tr';
   chapterIndex: number;
@@ -16,8 +28,8 @@ interface GameLoopProps {
   setManifestations: React.Dispatch<React.SetStateAction<any[]>>;
   enemies: any[];
   setEnemies: React.Dispatch<React.SetStateAction<any[]>>;
-  gameState: 'narrative' | 'playing' | 'gameover' | 'victory' | 'upgrading';
-  setGameState: React.Dispatch<React.SetStateAction<'narrative' | 'playing' | 'gameover' | 'victory' | 'upgrading'>>;
+  gameState: 'narrative' | 'playing' | 'gameover' | 'victory' | 'upgrading' | 'settings' | 'inventory' | 'shop' | 'boss' | 'multiplayer';
+  setGameState: React.Dispatch<React.SetStateAction<'narrative' | 'playing' | 'gameover' | 'victory' | 'upgrading' | 'settings' | 'inventory' | 'shop' | 'boss' | 'multiplayer'>>;
   shake: number;
   setShake: React.Dispatch<React.SetStateAction<number>>;
   isHeavy: boolean;
@@ -172,28 +184,28 @@ export const GameLoop = ({
       });
 
       // Spawn enemies with progressive level/rank scaling
-      const chapterFactor = 1 + (chapterIndex * 0.28);
+      const chapterFactor = 1 + (chapterIndex * 0.25);
       const rankFactor = 1 + ((rank - 1) * 0.1);
-      const spawnRate = Math.min(0.085, 0.0025 * chapterFactor * rankFactor * (1 - upgrades.soundProofing * 0.12));
-      const maxEnemies = 5 + chapterIndex * 2 + Math.floor(rank / 2);
+      const spawnRate = Math.min(0.09, 0.002 * chapterFactor * rankFactor * (1 - upgrades.soundProofing * 0.12));
+      const maxEnemies = 6 + chapterIndex * 2 + Math.floor(rank / 2);
       if (enemiesRef.current.length < maxEnemies && Math.random() < spawnRate) {
         const typeRoll = Math.random();
         let type: Enemy['type'] = 'standard';
-        let health = 62 + chapterIndex * 16 + rank * 5;
-        let speed = 0.06 + chapterIndex * 0.017 + rank * 0.006 + Math.random() * 0.05;
+        let health = 60 + chapterIndex * 15 + rank * 5;
+        let speed = 0.06 + chapterIndex * 0.015 + rank * 0.006 + Math.random() * 0.05;
 
         // Introduce enemy types progressively
         const activeCensors = enemiesRef.current.filter(e => e.type === 'censor').length;
         if (level >= 5 && typeRoll > 0.84 && activeCensors < 2) {
           type = 'censor';
           speed = 0.07 + (chapterIndex * 0.01);
-          health = 110 + chapterIndex * 12 + rank * 8;
+          health = 100 + chapterIndex * 12 + rank * 8;
         } else if (level >= 3 && typeRoll > 0.66) {
           type = 'infiltrator';
-          speed = 0.1 + chapterIndex * 0.018 + rank * 0.004;
+          speed = 0.1 + chapterIndex * 0.015 + rank * 0.004;
         } else if (level >= 4 && typeRoll > 0.52) {
           type = 'heavy';
-          health = 170 + chapterIndex * 20 + rank * 14;
+          health = 160 + chapterIndex * 18 + rank * 12;
           speed = 0.05 + chapterIndex * 0.008;
         }
 
