@@ -1,4 +1,9 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Shield, Zap, Droplets, Sun, Unlock, 
@@ -9,15 +14,33 @@ import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import confetti from 'canvas-confetti';
 
+// Import our new components
+import GameLoop from './game/GameLoop';
+import TypingInput from './game/TypingInput';
+import UpgradeSystem from './game/UpgradeSystem';
+import SettingsMenu from './game/SettingsMenu';
+import BossSystem from './game/BossSystem';
+import InventorySystem from './game/InventorySystem';
+import MultiplayerSystem from './game/MultiplayerSystem';
+import { loadGameState, saveGameState, defaultGameState } from '../utils/persistence';
+
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
+}
+
+// background music file URLs (Vite will copy these into the build)
+const menuAudioUrl = new URL('../../Sounds/menu.mp3', import.meta.url).href;
+function chapterAudioUrl(id: number) {
+  return new URL(`../../Sounds/${id}.mp3`, import.meta.url).href;
 }
 
 // --- Types & Constants ---
 
 type Language = 'en' | 'sv' | 'tr';
 
-export type ManifestationType = 'rain' | 'light' | 'heavy' | 'wall' | 'tangle' | 'open' | 'cold' | 'ghost' | 'fire' | 'gravity' | 'shield' | 'time';
+type KeywordEffectType = 'rain' | 'water' | 'blood' | 'red' | 'police' | 'thunder' | 'fire' | 'ghost' | 'cold' | 'heat' | 'wind' | 'dark';
+
+export type ManifestationType = 'rain' | 'light' | 'heavy' | 'wall' | 'tangle' | 'open' | 'heat' | 'cold' | 'ghost' | 'fire' | 'gravity' | 'shield' | 'time' | 'blood' | 'mirror';
 
 interface Manifestation {
   id: string;
@@ -37,6 +60,7 @@ interface Enemy {
   maxHealth: number;
   speed: number;
   state: 'marching' | 'stunned' | 'retreating';
+  shielded?: boolean;
 }
 
 interface Upgrades {
@@ -53,6 +77,30 @@ interface Chapter {
   manifestationWords: Record<string, ManifestationType>;
   isBoss?: boolean;
 }
+
+const KEYWORD_EFFECTS: Record<KeywordEffectType, string[]> = {
+  rain: ['rain', 'regn', 'yagmur', 'drizzle'],
+  water: ['water', 'vatten', 'su', 'ocean', 'river', 'flood', 'wave'],
+  blood: ['blood', 'blod', 'kan'],
+  red: ['red', 'rod', 'kirmizi', 'scarlet', 'crimson'],
+  police: ['police', 'polis', 'polisbil', 'siren', 'cop'],
+  thunder: ['thunder', 'storm', 'blixt', 'aska', 'firtina', 'yildirim'],
+  fire: ['fire', 'eld', 'ates', 'burn', 'flame'],
+  ghost: ['ghost', 'spoke', 'hayalet', 'spirit', 'shadow'],
+  cold: ['cold', 'kall', 'soguk', 'ice', 'frost', 'snow'],
+  heat: ['heat', 'hot', 'varm', 'sicak', 'lava'],
+  wind: ['wind', 'vind', 'ruzgar', 'gust', 'hurricane'],
+  dark: ['dark', 'morker', 'karanlik', 'night', 'blackout'],
+};
+
+const KEYWORD_COOLDOWN_MS = 1400;
+
+const normalizeForMatch = (value: string) =>
+  value
+    .toLocaleLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/ı/g, 'i');
 
 const TRANSLATIONS: Record<Language, { ui: Record<string, string>, chapters: Chapter[] }> = {
   en: {
@@ -72,6 +120,10 @@ const TRANSLATIONS: Record<Language, { ui: Record<string, string>, chapters: Cha
       upgrade: "Upgrade",
       chapter: "Chapter",
       forbidden: "Classified File",
+      inventory: "Inventory",
+      shop: "Shop",
+      boss: "Boss",
+      multiplayer: "Multiplayer",
       audio: "Audio",
       active: "Active",
       initAudio: "Click to enable",
@@ -79,7 +131,6 @@ const TRANSLATIONS: Record<Language, { ui: Record<string, string>, chapters: Cha
       detective: "Detective",
       truth: "The Truth",
       wrongGuess: "The Wrong Man",
-      powerWords: "Power Words",
     },
     chapters: [
       {
@@ -87,7 +138,7 @@ const TRANSLATIONS: Record<Language, { ui: Record<string, string>, chapters: Cha
         title: "The Body",
         goal: "Investigate the crime scene.",
         text: "The rain washes the blood from the pavement. I found the body in room 402. It was cold, like the silence of the city.",
-        manifestationWords: { "rain": "rain", "blood": "fire", "body": "ghost", "cold": "cold" }
+        manifestationWords: { "rain": "rain", "blood": "blood", "body": "ghost", "cold": "cold" }
       },
       {
         id: 2,
@@ -143,6 +194,10 @@ const TRANSLATIONS: Record<Language, { ui: Record<string, string>, chapters: Cha
       upgrade: "Uppgradera",
       chapter: "Kapitel",
       forbidden: "Klassificerad fil",
+      inventory: "Förråd",
+      shop: "Butik",
+      boss: "Boss",
+      multiplayer: "Flerspelarläge",
       audio: "Ljud",
       active: "Aktivt",
       initAudio: "Klicka för att aktivera",
@@ -150,7 +205,6 @@ const TRANSLATIONS: Record<Language, { ui: Record<string, string>, chapters: Cha
       detective: "Detektiv",
       truth: "Sanningen",
       wrongGuess: "Fel Man",
-      powerWords: "Kraftord",
     },
     chapters: [
       {
@@ -158,14 +212,14 @@ const TRANSLATIONS: Record<Language, { ui: Record<string, string>, chapters: Cha
         title: "Kroppen",
         goal: "Undersök brottsplatsen.",
         text: "Regnet tvättar blodet från trottoaren. Jag hittade kroppen i rum 402. Den var kall, som stadens tystnad.",
-        manifestationWords: { "regn": "rain", "blod": "fire", "kropp": "ghost", "kall": "cold" }
+        manifestationWords: { "regn": "rain", "blod": "blood", "kropp": "ghost", "kall": "cold" }
       },
       {
         id: 2,
         title: "Ledtråden",
         goal: "Hitta det saknade beviset.",
         text: "Jag behöver mer ljus för att se bandet. Det finns en konstig lukt i luften. En nyckel lämnades kvar i mörkret.",
-        manifestationWords: { "ljus": "light", "nyckel": "open", "mörkret": "ghost", "lukt": "tangle" }
+        manifestationWords: { "ljus": "light", "nyckel": "open", "mörker": "ghost", "lukt": "tangle" }
       },
       {
         id: 3,
@@ -187,13 +241,6 @@ const TRANSLATIONS: Record<Language, { ui: Record<string, string>, chapters: Cha
         goal: "Hörna den misstänkte.",
         text: "Elden brinner i hans ögon. Jag ska låsa dörren. Denna fälla är satt för hyresvärden. Han måste vara mördaren.",
         manifestationWords: { "eld": "fire", "lås": "shield", "fälla": "tangle", "mördare": "heavy" }
-      },
-      {
-        id: 6,
-        title: "Domen",
-        goal: "Möt den ultimata sanningen.",
-        text: "Sanningen är gömd i spegeln. Detta är slutet på historien. Bläcket avslöjar mitt eget ansikte. Det var jag.",
-        manifestationWords: { "sanning": "light", "spegel": "shield", "slut": "gravity", "bläck": "rain" }
       }
     ]
   },
@@ -214,6 +261,10 @@ const TRANSLATIONS: Record<Language, { ui: Record<string, string>, chapters: Cha
       upgrade: "Geliştir",
       chapter: "Bölüm",
       forbidden: "Gizli Dosya",
+      inventory: "Envanter",
+      shop: "Market",
+      boss: "Patron",
+      multiplayer: "Çoklu Oyuncu",
       audio: "Ses",
       active: "Aktif",
       initAudio: "Etkinleştirmek için tıkla",
@@ -221,7 +272,6 @@ const TRANSLATIONS: Record<Language, { ui: Record<string, string>, chapters: Cha
       detective: "Dedektif",
       truth: "Gerçek",
       wrongGuess: "Yanlış Adam",
-      powerWords: "Güç Sözcükleri",
     },
     chapters: [
       {
@@ -229,7 +279,7 @@ const TRANSLATIONS: Record<Language, { ui: Record<string, string>, chapters: Cha
         title: "Ceset",
         goal: "Olay yerini incele.",
         text: "Yağmur kaldırımdaki kanı yıkıyor. Cesedi 402 numaralı odada buldum. Şehrin sessizliği gibi soğuktu.",
-        manifestationWords: { "yağmur": "rain", "kan": "fire", "cesedi": "ghost", "soğuk": "cold" }
+        manifestationWords: { "yağmur": "rain", "kan": "blood", "ceset": "ghost", "soğuk": "cold" }
       },
       {
         id: 2,
@@ -294,80 +344,156 @@ const GlitchEffect = ({ active }: { active: boolean }) => (
   </AnimatePresence>
 );
 
-export default function Game() {
+function Game() {
   const [lang, setLang] = useState<Language>('en');
   const [chapterIndex, setChapterIndex] = useState(0);
   const [typedText, setTypedText] = useState("");
   const [manifestations, setManifestations] = useState<Manifestation[]>([]);
   const [enemies, setEnemies] = useState<Enemy[]>([]);
-  const [gameState, setGameState] = useState<'narrative' | 'playing' | 'gameover' | 'victory' | 'upgrading'>('narrative');
+  const [gameState, setGameState] = useState<'narrative' | 'playing' | 'gameover' | 'victory' | 'upgrading' | 'settings' | 'inventory' | 'shop' | 'boss' | 'multiplayer'>('narrative');
   const [shake, setShake] = useState(0);
   const [isHeavy, setIsHeavy] = useState(false);
   const [isCold, setIsCold] = useState(false);
-  const [isTangled, setIsTangled] = useState(false);
+  const [isHeat, setIsHeat] = useState(false);
   const [isGravity, setIsGravity] = useState(false);
   const [isShielded, setIsShielded] = useState(false);
   const [isTimeSlowed, setIsTimeSlowed] = useState(false);
+  const [isRaining, setIsRaining] = useState(false);
+  const [isWaterPulse, setIsWaterPulse] = useState(false);
+  const [isPoliceAlert, setIsPoliceAlert] = useState(false);
+  const [bloodFlash, setBloodFlash] = useState(false);
+  const [redFlash, setRedFlash] = useState(false);
+  const [stormFlash, setStormFlash] = useState(false);
+  const [darkFlash, setDarkFlash] = useState(false);
+  const [ghostFog, setGhostFog] = useState(false);
+  const [windRush, setWindRush] = useState(false);
   const [revolutionPoints, setRevolutionPoints] = useState(0);
-  const [keystrokes, setKeystrokes] = useState(0);
-  const [mistakes, setMistakes] = useState(0);
-  const [audioOn, setAudioOn] = useState(false);
   const [upgrades, setUpgrades] = useState<Upgrades>({
     oiledKeys: 0,
     magicRibbon: 0,
     soundProofing: 0
   });
-
-  // Refs mirror the latest state so the game loop and the key handler always
-  // read fresh values without being re-registered on every keystroke.
-  const typedTextRef = useRef("");
-  const enemiesRef = useRef<Enemy[]>([]);
-  const gameStateRef = useRef<'narrative' | 'playing' | 'gameover' | 'victory' | 'upgrading'>('narrative');
-  const timeoutsRef = useRef<number[]>([]);
+  const [audioSettings, setAudioSettings] = useState({
+    masterVolume: 0.8,
+    musicVolume: 0.6,
+    sfxVolume: 0.7
+  });
+  const [graphicsSettings, setGraphicsSettings] = useState({
+    particleIntensity: 1.0,
+    screenEffects: true,
+    colorBlindMode: false
+  });
+  const [accessibilitySettings, setAccessibilitySettings] = useState({
+    reducedMotion: false,
+    highContrast: false
+  });
+  
+  // Load settings from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedAudio = localStorage.getItem('tsr_audio');
+      const savedGraphics = localStorage.getItem('tsr_graphics');
+      const savedAccessibility = localStorage.getItem('tsr_accessibility');
+      if (savedAudio) setAudioSettings(JSON.parse(savedAudio));
+      if (savedGraphics) setGraphicsSettings(JSON.parse(savedGraphics));
+      if (savedAccessibility) setAccessibilitySettings(JSON.parse(savedAccessibility));
+    } catch (e) {
+      console.warn('Could not load settings', e);
+    }
+  }, []);
   
   const t = TRANSLATIONS[lang];
   const chapter = t.chapters[chapterIndex];
+  const level = chapterIndex + 1;
+  const rank = chapterIndex + 1;
 
-  // Keep the refs in sync with state (single source of truth remains state).
-  useEffect(() => { typedTextRef.current = typedText; }, [typedText]);
-  useEffect(() => { enemiesRef.current = enemies; }, [enemies]);
-  useEffect(() => { gameStateRef.current = gameState; }, [gameState]);
+  // Language change - reset typed text
+  useEffect(() => {
+    setTypedText("");
+  }, [lang]);
 
-  // Manifestation timers are registered so a restart can cancel pending ones.
-  const schedule = useCallback((fn: () => void, ms: number) => {
-    const id = window.setTimeout(() => {
-      timeoutsRef.current = timeoutsRef.current.filter(i => i !== id);
-      fn();
-    }, ms);
-    timeoutsRef.current.push(id);
-  }, []);
-
-  const clearScheduled = useCallback(() => {
-    timeoutsRef.current.forEach(id => window.clearTimeout(id));
-    timeoutsRef.current = [];
-  }, []);
+  // Chapter change - reset typed text  
+  useEffect(() => {
+    setTypedText("");
+  }, [chapterIndex]);
 
   // Audio Logic
   const audioCtxRef = useRef<AudioContext | null>(null);
+  const bgAudioRef = useRef<HTMLAudioElement | null>(null);
+  const enemiesRef = useRef<Enemy[]>([]);
+  const keywordCooldownRef = useRef<Record<KeywordEffectType, number>>({
+    rain: 0,
+    water: 0,
+    blood: 0,
+    red: 0,
+    police: 0,
+    thunder: 0,
+    fire: 0,
+    ghost: 0,
+    cold: 0,
+    heat: 0,
+    wind: 0,
+    dark: 0,
+  });
 
   const initAudio = useCallback(() => {
-    const existing = audioCtxRef.current;
-    const ctx = existing ?? new (window.AudioContext || (window as any).webkitAudioContext)();
-    if (!existing) {
-      ctx.onstatechange = () => setAudioOn(ctx.state === 'running');
-      audioCtxRef.current = ctx;
+    if (!audioCtxRef.current) {
+      audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
-    if (ctx.state === 'suspended') {
-      void ctx.resume().then(() => setAudioOn(true)).catch(() => {});
-    } else {
-      setAudioOn(ctx.state === 'running');
+    if (audioCtxRef.current.state === 'suspended') {
+      audioCtxRef.current.resume();
     }
-    return ctx;
+    return audioCtxRef.current;
   }, []);
 
-  const playSound = useCallback((type: 'click' | 'bell' | 'backspace' | 'glitch') => {
+  // manage background music when the state changes
+  useEffect(() => {
+    if (!bgAudioRef.current) {
+      bgAudioRef.current = new Audio();
+      bgAudioRef.current.loop = true;
+    }
+    const audioEl = bgAudioRef.current;
+    if (gameState === 'narrative') {
+      audioEl.src = menuAudioUrl;
+      initAudio();
+      audioEl.play().catch(() => {});
+    } else if (gameState === 'playing') {
+      audioEl.src = chapterAudioUrl(chapter.id);
+      initAudio();
+      audioEl.play().catch(() => {});
+    } else {
+      audioEl.pause();
+    }
+  }, [gameState, chapter.id, initAudio]);
+
+  // Apply background music volume settings
+  useEffect(() => {
+    if (bgAudioRef.current) {
+      bgAudioRef.current.volume = audioSettings.masterVolume * audioSettings.musicVolume;
+    }
+  }, [audioSettings.masterVolume, audioSettings.musicVolume]);
+
+  // listen for first user interaction to unlock autoplay restrictions
+  useEffect(() => {
+    const onFirstClick = () => {
+      initAudio();
+      bgAudioRef.current?.play().catch(() => {});
+      document.removeEventListener('click', onFirstClick);
+    };
+    document.addEventListener('click', onFirstClick, { once: true });
+    return () => document.removeEventListener('click', onFirstClick);
+  }, [initAudio]);
+
+  useEffect(() => {
+    enemiesRef.current = enemies;
+  }, [enemies]);
+
+  const playSound = useCallback((type: 'click' | 'bell' | 'backspace' | 'glitch' | 'siren' | 'thunder') => {
     const ctx = initAudio();
     const now = ctx.currentTime;
+    const sfxVol = audioSettings.masterVolume * audioSettings.sfxVolume;
+
+    if (sfxVol <= 0) return;
 
     if (type === 'click') {
       const osc = ctx.createOscillator();
@@ -375,8 +501,8 @@ export default function Game() {
       osc.type = 'triangle';
       osc.frequency.setValueAtTime(150 + Math.random() * 50, now);
       osc.frequency.exponentialRampToValueAtTime(40, now + 0.06);
-      gain.gain.setValueAtTime(0.08, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+      gain.gain.setValueAtTime(0.08 * sfxVol, now);
+      gain.gain.exponentialRampToValueAtTime(0.001 * sfxVol, now + 0.06);
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start(now);
@@ -386,8 +512,8 @@ export default function Game() {
       const gain = ctx.createGain();
       osc.type = 'sine';
       osc.frequency.setValueAtTime(1200, now);
-      gain.gain.setValueAtTime(0.15, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+      gain.gain.setValueAtTime(0.15 * sfxVol, now);
+      gain.gain.exponentialRampToValueAtTime(0.001 * sfxVol, now + 0.6);
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start(now);
@@ -397,8 +523,8 @@ export default function Game() {
       const gain = ctx.createGain();
       osc.type = 'sawtooth';
       osc.frequency.setValueAtTime(80, now);
-      gain.gain.setValueAtTime(0.05, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+      gain.gain.setValueAtTime(0.05 * sfxVol, now);
+      gain.gain.exponentialRampToValueAtTime(0.001 * sfxVol, now + 0.1);
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start(now);
@@ -409,16 +535,45 @@ export default function Game() {
       osc.type = 'square';
       osc.frequency.setValueAtTime(20, now);
       osc.frequency.linearRampToValueAtTime(100, now + 0.2);
-      gain.gain.setValueAtTime(0.05, now);
+      gain.gain.setValueAtTime(0.05 * sfxVol, now);
       gain.gain.linearRampToValueAtTime(0, now + 0.2);
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start(now);
       osc.stop(now + 0.2);
+    } else if (type === 'siren') {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(620, now);
+      osc.frequency.linearRampToValueAtTime(980, now + 0.8);
+      osc.frequency.linearRampToValueAtTime(620, now + 1.6);
+      gain.gain.setValueAtTime(0.06 * sfxVol, now);
+      gain.gain.exponentialRampToValueAtTime(0.001 * sfxVol, now + 1.6);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 1.6);
+    } else if (type === 'thunder') {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(80, now);
+      osc.frequency.exponentialRampToValueAtTime(30, now + 0.7);
+      gain.gain.setValueAtTime(0.08 * sfxVol, now);
+      gain.gain.exponentialRampToValueAtTime(0.001 * sfxVol, now + 0.7);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.7);
     }
-  }, [initAudio]);
+  }, [initAudio, audioSettings.masterVolume, audioSettings.sfxVolume]);
 
-  // Handle Manifestations
+  const pulseState = (setter: React.Dispatch<React.SetStateAction<boolean>>, duration: number) => {
+    setter(true);
+    setTimeout(() => setter(false), duration);
+  };
+
   const triggerManifestation = useCallback((type: ManifestationType) => {
     const id = Math.random().toString(36).slice(2, 11);
     const newManifestation: Manifestation = {
@@ -431,189 +586,80 @@ export default function Game() {
     };
     setManifestations(prev => [...prev, newManifestation]);
     setShake(15);
-    schedule(() => setShake(0), 150);
+    setTimeout(() => setShake(0), 150);
 
     if (type === 'light') {
       setEnemies(prev => prev.map(e => ({ ...e, state: 'stunned' })));
-      schedule(() => setEnemies(prev => prev.map(e => (e.state === 'stunned' ? { ...e, state: 'marching' } : e))), 3000);
+      setTimeout(() => setEnemies(prev => prev.map(e => ({ ...e, state: 'marching' }))), 3000);
     }
     if (type === 'rain') {
+      pulseState(setIsRaining, 2500);
       confetti({ particleCount: 30, spread: 50, origin: { y: 0.7 }, colors: ['#60a5fa'] });
     }
     if (type === 'fire') {
-      setEnemies(prev => prev.map(e => ({ ...e, health: Math.max(0, e.health - 100) })));
+      pulseState(setIsHeat, 2200);
+      setEnemies(prev => prev.map(e => ({ ...e, health: e.health - 100 })));
     }
-    if (type === 'heavy') {
-      setShake(30);
-      schedule(() => setShake(0), 300);
-      setEnemies(prev => prev.map(e => ({ ...e, health: Math.max(0, e.health - 60), x: Math.max(0, e.x - 5) })));
-      setIsHeavy(true);
-      schedule(() => setIsHeavy(false), 3000);
+    if (type === 'blood') {
+      pulseState(setBloodFlash, 1800);
+      setEnemies(prev => prev.map(e => ({ ...e, health: e.health - 130 })));
     }
     if (type === 'cold') {
       setIsCold(true);
-      schedule(() => setIsCold(false), 4000);
+      setTimeout(() => setIsCold(false), 4000);
     }
     if (type === 'wall') {
       setEnemies(prev => prev.map(e => ({ ...e, x: Math.max(0, e.x - 20) })));
     }
-    if (type === 'tangle') {
-      // Snare: shoves enemies back and slows them while it holds.
-      setEnemies(prev => prev.map(e => ({ ...e, x: Math.max(0, e.x - 10) })));
-      setIsTangled(true);
-      schedule(() => setIsTangled(false), 4000);
-    }
-    if (type === 'ghost') {
-      // The ghost scares enemies into retreat for a while.
-      setEnemies(prev => prev.map(e => ({ ...e, state: 'retreating' })));
-      schedule(() => setEnemies(prev => prev.map(e => (e.state === 'retreating' ? { ...e, state: 'marching' } : e))), 2500);
-    }
     if (type === 'time') {
       setIsTimeSlowed(true);
-      schedule(() => setIsTimeSlowed(false), 5000);
+      setTimeout(() => setIsTimeSlowed(false), 5000);
     }
     if (type === 'gravity') {
       setIsGravity(true);
-      schedule(() => setIsGravity(false), 3000);
+      setTimeout(() => setIsGravity(false), 3000);
     }
     if (type === 'shield') {
       setIsShielded(true);
-      schedule(() => setIsShielded(false), 5000);
+      setTimeout(() => setIsShielded(false), 5000);
     }
-  }, [upgrades.magicRibbon, schedule]);
+    if (type === 'heavy') {
+      pulseState(setIsHeavy, 1500);
+    }
+    if (type === 'heat') {
+      pulseState(setIsHeat, 1600);
+    }
+    if (type === 'mirror') {
+      pulseState(setDarkFlash, 1800);
+    }
+  }, [upgrades.magicRibbon]);
 
-  // Typing Logic
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (gameStateRef.current !== 'playing') return;
-      // Never capture shortcuts such as Ctrl+C / Cmd+R / Alt+Tab combos.
-      if (e.ctrlKey || e.metaKey || e.altKey) return;
-
-      if (e.key === 'Backspace') {
-        e.preventDefault();
-        playSound('backspace');
-        typedTextRef.current = typedTextRef.current.slice(0, -1);
-        setTypedText(typedTextRef.current);
-        return;
-      }
-
-      if (e.key.length === 1) {
-        // Stop Space from scrolling or re-activating a focused button.
-        if (e.key === ' ') e.preventDefault();
-        playSound('click');
-        const char = e.key;
-        const prev = typedTextRef.current;
-        const next = prev + char;
-
-        setKeystrokes(k => k + 1);
-        if (char !== chapter.text[prev.length]) setMistakes(m => m + 1);
-
-        typedTextRef.current = next;
-        setTypedText(next);
-
-        // Check for manifestation words (side effects kept outside state updaters)
-        for (const [word, manifestType] of Object.entries(chapter.manifestationWords)) {
-          if (next.toLowerCase().endsWith(word.toLowerCase())) {
-            triggerManifestation(manifestType);
-          }
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [chapter, triggerManifestation, playSound]);
-
-  // Game Loop
-  useEffect(() => {
-    if (gameState !== 'playing') return;
-    let ended = false;
-
-    const interval = setInterval(() => {
-      if (ended || gameStateRef.current !== 'playing') return;
-
-      setManifestations(prev => prev.filter(m => Date.now() - m.startTime < m.duration));
-
-      // Derive the next enemy state from the latest snapshot (kept in a ref,
-      // so this closure never goes stale and updaters stay pure).
-      const snapshot = enemiesRef.current;
-      let deletedChars = 0;
-
-      const moved = snapshot.map(e => {
-        // Censor Effect: deletes typed text when close (only while marching)
-        if (e.type === 'censor' && e.state === 'marching' && e.x > 78 && Math.random() < 0.04) {
-          deletedChars++;
-        }
-        if (e.state === 'stunned') return e;
-        if (e.state === 'retreating') return { ...e, x: Math.max(0, e.x - e.speed * 1.5) };
-        let moveSpeed = e.speed;
-        if (isTimeSlowed) moveSpeed *= 0.3;
-        if (isTangled) moveSpeed *= 0.5;
-        return { ...e, x: e.x + moveSpeed };
-      }).filter(e => e.health > 0);
-
-      if (deletedChars > 0) {
-        typedTextRef.current = typedTextRef.current.slice(0, -deletedChars);
-        setTypedText(typedTextRef.current);
-        playSound('glitch');
-      }
-
-      // Spawn enemies
-      const spawnRate = (0.005 + chapterIndex * 0.006) * (1 - upgrades.soundProofing * 0.2);
-      if (Math.random() < spawnRate) {
-        const typeRoll = Math.random();
-        let type: Enemy['type'] = 'standard';
-        let health = 80 + chapterIndex * 15;
-        let speed = 0.12 + (chapterIndex * 0.04) + Math.random() * 0.25;
-
-        // Introduce enemy types progressively
-        const activeCensors = snapshot.filter(e => e.type === 'censor').length;
-        if (chapterIndex >= 4 && typeRoll > 0.85 && activeCensors < 2) {
-          type = 'censor';
-          speed = 0.1 + (chapterIndex * 0.015);
-          health = 120 + chapterIndex * 10;
-        } else if (chapterIndex >= 2 && typeRoll > 0.7) {
-          type = 'infiltrator';
-          speed = 0.18 + (chapterIndex * 0.025);
-        } else if (chapterIndex >= 3 && typeRoll > 0.5) {
-          type = 'heavy';
-          health = 180 + chapterIndex * 25;
-          speed = 0.07 + (chapterIndex * 0.01);
-        }
-
-        moved.push({
-          id: Math.random().toString(36).slice(2, 11),
-          type,
-          x: 0,
-          y: Math.random() * 60 + 20,
-          health,
-          maxHealth: health,
-          speed,
-          state: 'marching'
-        });
-      }
-
-      if (!isShielded && moved.some(e => e.x > 85)) {
-        ended = true;
-        setEnemies(moved);
-        setGameState('gameover');
-        return;
-      }
-
-      setEnemies(moved);
-
-      // Check for victory
-      if (typedTextRef.current.length >= chapter.text.length) {
-        ended = true;
-        setGameState('victory');
-        setRevolutionPoints(prev => prev + (chapter.id * 100));
-        playSound('bell');
-        confetti({ particleCount: 150, spread: 100, origin: { y: 0.5 } });
-      }
-    }, 50);
-
-    return () => clearInterval(interval);
-  }, [gameState, chapter, chapterIndex, isTimeSlowed, isTangled, isShielded, upgrades.soundProofing, playSound]);
+  const triggerKeywordEffect = useCallback((effect: KeywordEffectType) => {
+    if (effect === 'rain') triggerManifestation('rain');
+    if (effect === 'water') {
+      pulseState(setIsWaterPulse, 1500);
+      triggerManifestation('rain');
+    }
+    if (effect === 'blood') triggerManifestation('blood');
+    if (effect === 'red') pulseState(setRedFlash, 1400);
+    if (effect === 'police') {
+      pulseState(setIsPoliceAlert, 2200);
+      playSound('siren');
+    }
+    if (effect === 'thunder') {
+      pulseState(setStormFlash, 1200);
+      playSound('thunder');
+    }
+    if (effect === 'fire') triggerManifestation('fire');
+    if (effect === 'ghost') {
+      pulseState(setGhostFog, 1800);
+      triggerManifestation('ghost');
+    }
+    if (effect === 'cold') triggerManifestation('cold');
+    if (effect === 'heat') triggerManifestation('heat');
+    if (effect === 'wind') pulseState(setWindRush, 1500);
+    if (effect === 'dark') pulseState(setDarkFlash, 1800);
+  }, [playSound, triggerManifestation]);
 
   const buyUpgrade = (key: keyof Upgrades) => {
     const cost = (upgrades[key] + 1) * 150;
@@ -625,31 +671,62 @@ export default function Game() {
 
   const startChapter = () => {
     initAudio();
-    // Cancel any manifestation timers still pending from the previous run.
-    clearScheduled();
-    typedTextRef.current = "";
     setTypedText("");
     setManifestations([]);
     setEnemies([]);
-    gameStateRef.current = 'playing';
     setGameState('playing');
     setIsHeavy(false);
     setIsCold(false);
-    setIsTangled(false);
+    setIsHeat(false);
     setIsGravity(false);
     setIsShielded(false);
     setIsTimeSlowed(false);
-    setKeystrokes(0);
-    setMistakes(0);
+    setIsRaining(false);
+    setIsWaterPulse(false);
+    setIsPoliceAlert(false);
+    setBloodFlash(false);
+    setRedFlash(false);
+    setStormFlash(false);
+    setDarkFlash(false);
+    setGhostFog(false);
+    setWindRush(false);
   };
 
   return (
     <div className={cn(
       "relative min-h-screen w-full bg-[#0a0a0a] text-[#c0c0c0] font-mono overflow-hidden selection:bg-[#f27d26] selection:text-black transition-all duration-1000",
-      isCold && "bg-blue-950/20"
+      isCold && "bg-blue-950/20",
+      isHeat && "bg-orange-950/20"
     )}>
       <CRTOverlay />
       <GlitchEffect active={enemies.some(e => e.type === 'censor' && e.x > 70)} />
+
+      {isRaining && (
+        <div className="pointer-events-none fixed inset-0 z-40 overflow-hidden opacity-40">
+          {Array.from({ length: 60 }).map((_, i) => (
+            <div
+              key={i}
+              className="absolute h-14 w-[2px] bg-gradient-to-b from-sky-200/0 to-sky-300 animate-[rain_1s_linear_infinite]"
+              style={{ left: `${(i * 7) % 100}%`, top: `${(i * 11) % 100}%`, animationDelay: `${(i % 10) * 0.08}s` }}
+            />
+          ))}
+        </div>
+      )}
+      {isPoliceAlert && (
+        <div className="pointer-events-none fixed inset-0 z-40 overflow-hidden">
+          <div className="absolute inset-y-0 left-[-35%] w-1/3 bg-blue-500/20 animate-[policeMove_2s_linear_forwards]" />
+          <div className="absolute inset-y-0 right-[-35%] w-1/3 bg-red-500/20 animate-[policeMoveReverse_2s_linear_forwards]" />
+          <div className="absolute bottom-12 left-0 text-5xl animate-[drive_2s_linear_forwards]">🚓</div>
+          <div className="absolute bottom-20 left-[-8rem] text-5xl animate-[drive_2.1s_linear_forwards]">🚔</div>
+        </div>
+      )}
+      {bloodFlash && <div className="pointer-events-none fixed inset-0 z-40 bg-red-900/45 animate-pulse" />}
+      {redFlash && <div className="pointer-events-none fixed inset-0 z-40 bg-red-500/20" />}
+      {stormFlash && <div className="pointer-events-none fixed inset-0 z-40 bg-white/35 animate-pulse" />}
+      {darkFlash && <div className="pointer-events-none fixed inset-0 z-40 bg-black/45" />}
+      {ghostFog && <div className="pointer-events-none fixed inset-0 z-40 bg-slate-200/10 backdrop-blur-sm" />}
+      {windRush && <div className="pointer-events-none fixed inset-0 z-40 bg-cyan-200/10" />}
+      {isWaterPulse && <div className="pointer-events-none fixed inset-0 z-40 bg-sky-500/20" />}
       
       {/* Background Room Layer */}
       <div 
@@ -678,10 +755,11 @@ export default function Game() {
                 {m.type === 'light' && <Sun className="text-yellow-200 w-24 h-24 animate-pulse blur-sm" />}
                 {m.type === 'ghost' && <Ghost className="text-white/40 w-20 h-20 animate-pulse" />}
                 {m.type === 'fire' && <Flame className="text-red-500 w-20 h-20 animate-bounce" />}
+                {m.type === 'blood' && <Flame className="text-red-700 w-20 h-20 animate-pulse" />}
+                {m.type === 'heat' && <Flame className="text-orange-300 w-20 h-20 animate-pulse" />}
+                {m.type === 'mirror' && <div className="w-12 h-20 border-2 border-white/40 bg-white/10 rounded" />}
                 {m.type === 'wall' && <div className="w-6 h-40 bg-gray-800 border-2 border-gray-600 rounded" />}
                 {m.type === 'cold' && <Snowflake className="text-blue-200 w-16 h-16 animate-spin-slow" />}
-                {m.type === 'tangle' && <div className="w-20 h-20 rounded-full border-4 border-dashed border-purple-400/70 animate-spin-slow" />}
-                {m.type === 'heavy' && <div className="w-16 h-16 bg-gray-700 border-4 border-gray-500 rounded-lg animate-bounce shadow-2xl" />}
                 {m.type === 'shield' && <div className="w-32 h-32 border-4 border-blue-400/30 rounded-full animate-pulse" />}
                 {m.type === 'open' && <Unlock className="text-amber-400 w-12 h-12" />}
               </div>
@@ -741,16 +819,11 @@ export default function Game() {
           <div className="flex flex-col items-end gap-2">
             <div className="flex gap-2">
               {(['en', 'sv', 'tr'] as Language[]).map(l => (
-                <button
+                <button 
                   key={l}
-                  disabled={gameState === 'playing'}
-                  onClick={(e) => {
-                    // Blur so Space/Enter during play can't re-trigger the button.
-                    e.currentTarget.blur();
-                    setLang(l);
-                  }}
+                  onClick={() => setLang(l)}
                   className={cn(
-                    "px-2 py-1 text-[10px] border rounded transition-all disabled:opacity-40 disabled:cursor-not-allowed",
+                    "px-2 py-1 text-[10px] border rounded transition-all",
                     lang === l ? "bg-[#f27d26] text-black border-[#f27d26]" : "border-white/20 hover:border-white/50"
                   )}
                 >
@@ -760,8 +833,9 @@ export default function Game() {
             </div>
             <div className="text-right">
               <div className="text-[10px] opacity-50 uppercase font-bold tracking-widest">{t.ui.points}: {revolutionPoints}</div>
+              <div className="text-[10px] opacity-50 uppercase font-bold tracking-widest">LEVEL {level} // RANK {rank}</div>
               <div className="text-[8px] opacity-30 uppercase font-bold tracking-widest mt-1">
-                {t.ui.audio}: {audioOn ? t.ui.active : t.ui.initAudio}
+                {t.ui.audio}: {audioCtxRef.current?.state === 'running' ? t.ui.active : t.ui.initAudio}
               </div>
             </div>
           </div>
@@ -773,22 +847,22 @@ export default function Game() {
             <motion.div 
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-black/90 p-10 border border-white/10 backdrop-blur-xl rounded-2xl shadow-2xl max-w-2xl mx-auto"
+              className="bg-black/90 p-8 border border-white/10 backdrop-blur-xl rounded-2xl shadow-2xl max-w-3xl w-full mx-auto"
             >
-              <div className="flex items-center gap-4 mb-8">
-                <BookOpen className="w-10 h-10 text-[#f27d26]" />
-                <h2 className="text-2xl font-display uppercase italic text-white">{chapter.goal}</h2>
+              <div className="flex items-center gap-4 mb-6">
+                <BookOpen className="w-8 h-8 text-[#f27d26] shrink-0" />
+                <h2 className="text-xl font-display uppercase italic text-white leading-tight">{chapter.goal}</h2>
               </div>
-              <p className="text-xl leading-relaxed opacity-80 mb-10 font-light">
+              <p className="text-base leading-relaxed opacity-80 mb-8 font-light">
                 {chapter.id === 1 ? (lang === 'sv' ? "Staden sover, men brottet vilar aldrig. Din skrivmaskin är ditt enda vittne." : lang === 'tr' ? "Şehir uyuyor ama suç asla dinlenmez. Daktilon senin tek tanığın." : "The city sleeps, but crime never rests. Your typewriter is your only witness.") : (lang === 'sv' ? "Sanningen kommer fram, bokstav för bokstav." : lang === 'tr' ? "Gerçek ortaya çıkıyor, harf harf." : "The truth emerges, letter by letter.")}
-                <span className="block mt-4 text-[#f27d26] font-bold italic">
-                  "{lang === 'sv' ? "Bläcket ljuger aldrig." : lang === 'tr' ? "Mürekkep asla yalan söylemez." : "The ink never lies."}"
+                <span className="block mt-3 text-[#f27d26] font-bold italic">
+                  &ldquo;{lang === 'sv' ? 'Bläcket ljuger aldrig.' : lang === 'tr' ? 'Mürekkep asla yalan söylemez.' : 'The ink never lies.'}&rdquo;
                 </span>
               </p>
-              <div className="flex gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <button 
                   onClick={startChapter}
-                  className="group relative flex-1 px-8 py-5 bg-[#f27d26] text-black font-black uppercase tracking-[0.2em] overflow-hidden rounded-lg hover:bg-white transition-all"
+                  className="group relative col-span-2 sm:col-span-3 px-6 py-4 bg-[#f27d26] text-black font-black uppercase tracking-widest text-sm overflow-hidden rounded-lg hover:bg-white transition-all"
                 >
                   <span className="relative z-10">{t.ui.initialize}</span>
                   <div className="absolute inset-0 bg-white translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
@@ -796,62 +870,108 @@ export default function Game() {
                 {chapterIndex > 0 && (
                   <button 
                     onClick={() => setGameState('upgrading')}
-                    className="px-8 py-5 bg-white/10 text-white font-black uppercase tracking-[0.2em] rounded-lg hover:bg-white/20 transition-all"
+                    className="px-4 py-3 bg-white/10 text-white font-bold uppercase tracking-widest text-xs rounded-lg hover:bg-white/20 transition-all"
                   >
                     {t.ui.upgrades}
                   </button>
                 )}
+                {chapterIndex > 0 && (
+                  <button 
+                    onClick={() => setGameState('inventory')}
+                    className="px-4 py-3 bg-white/10 text-white font-bold uppercase tracking-widest text-xs rounded-lg hover:bg-white/20 transition-all"
+                  >
+                    {t.ui.inventory}
+                  </button>
+                )}
+                {chapterIndex > 0 && (
+                  <button 
+                    onClick={() => setGameState('shop')}
+                    className="px-4 py-3 bg-white/10 text-white font-bold uppercase tracking-widest text-xs rounded-lg hover:bg-white/20 transition-all"
+                  >
+                    {t.ui.shop}
+                  </button>
+                )}
+                {chapterIndex > 0 && (
+                  <button 
+                    onClick={() => setGameState('boss')}
+                    className="px-4 py-3 bg-red-500/20 text-red-400 font-bold uppercase tracking-widest text-xs rounded-lg hover:bg-red-500/30 transition-all"
+                  >
+                    {t.ui.boss}
+                  </button>
+                )}
+                <button 
+                  onClick={() => setGameState('multiplayer')}
+                  className="px-4 py-3 bg-blue-500/20 text-blue-400 font-bold uppercase tracking-widest text-xs rounded-lg hover:bg-blue-500/30 transition-all"
+                >
+                  {t.ui.multiplayer}
+                </button>
+                <button 
+                  onClick={() => setGameState('settings')}
+                  className="px-4 py-3 bg-white/10 text-white font-bold uppercase tracking-widest text-xs rounded-lg hover:bg-white/20 transition-all"
+                >
+                  ⚙️ {lang === 'sv' ? 'Inställningar' : lang === 'tr' ? 'Ayarlar' : 'Settings'}
+                </button>
               </div>
             </motion.div>
           )}
 
-          {gameState === 'upgrading' && (
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="bg-black/95 p-10 border border-white/10 backdrop-blur-xl rounded-2xl shadow-2xl max-w-3xl mx-auto w-full"
-            >
-              <div className="flex justify-between items-center mb-8">
-                <h2 className="text-3xl font-display uppercase italic text-[#f27d26]">{t.ui.typewriterMods}</h2>
-                <div className="text-xl font-bold">{t.ui.points}: {revolutionPoints}</div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-                {[
-                  { id: 'oiledKeys', name: 'Oiled Keys', icon: Zap },
-                  { id: 'magicRibbon', name: 'Magic Ribbon', icon: Flame },
-                  { id: 'soundProofing', name: 'Sound Proofing', icon: Shield },
-                ].map((u) => {
-                  const level = upgrades[u.id as keyof Upgrades];
-                  const cost = (level + 1) * 150;
-                  return (
-                    <div key={u.id} className="p-6 bg-white/5 border border-white/10 rounded-xl flex flex-col items-center text-center">
-                      <u.icon className="w-10 h-10 text-[#f27d26] mb-4" />
-                      <h3 className="text-lg font-bold mb-2">{u.name}</h3>
-                      <div className="flex gap-1 mb-6">
-                        {[1, 2, 3].map(i => (
-                          <div key={i} className={cn("w-4 h-1 rounded", i <= level ? "bg-[#f27d26]" : "bg-white/10")} />
-                        ))}
-                      </div>
-                      <button 
-                        onClick={() => buyUpgrade(u.id as keyof Upgrades)}
-                        disabled={revolutionPoints < cost || level >= 3}
-                        className="w-full py-2 bg-white/10 rounded font-bold text-xs uppercase hover:bg-[#f27d26] hover:text-black disabled:opacity-30 transition-all"
-                      >
-                        {level >= 3 ? t.ui.maxed : `${t.ui.upgrade} (${cost})`}
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
 
-              <button 
-                onClick={() => setGameState('narrative')}
-                className="w-full py-4 bg-white text-black font-black uppercase tracking-widest rounded-lg hover:bg-[#f27d26] transition-all"
-              >
-                {t.ui.return}
-              </button>
-            </motion.div>
+          {gameState === 'upgrading' && (
+            <UpgradeSystem
+              gameState={gameState}
+              setGameState={setGameState}
+              upgrades={upgrades}
+              setUpgrades={setUpgrades}
+              revolutionPoints={revolutionPoints}
+              setRevolutionPoints={setRevolutionPoints}
+              t={t}
+            />
+          )}
+
+          {gameState === 'settings' && (
+            <SettingsMenu
+              gameState={gameState}
+              setGameState={setGameState}
+              t={t}
+              lang={lang}
+              audioSettings={audioSettings}
+              setAudioSettings={setAudioSettings}
+              graphicsSettings={graphicsSettings}
+              setGraphicsSettings={setGraphicsSettings}
+              accessibilitySettings={accessibilitySettings}
+              setAccessibilitySettings={setAccessibilitySettings}
+            />
+          )}
+
+          {(gameState === 'inventory' || gameState === 'shop') && (
+            <InventorySystem
+              gameState={gameState}
+              setGameState={setGameState}
+              revolutionPoints={revolutionPoints}
+              setRevolutionPoints={setRevolutionPoints}
+              t={t}
+            />
+          )}
+
+          {gameState === 'boss' && (
+            <BossSystem
+              gameState={gameState}
+              setGameState={setGameState}
+              chapterIndex={chapterIndex}
+              typedText={typedText}
+              revolutionPoints={revolutionPoints}
+              setRevolutionPoints={setRevolutionPoints}
+              t={t}
+            />
+          )}
+
+          {gameState === 'multiplayer' && (
+            <MultiplayerSystem
+              gameState={gameState}
+              setGameState={setGameState}
+              t={t}
+              lang={lang}
+            />
           )}
 
           {gameState === 'playing' && (
@@ -901,21 +1021,6 @@ export default function Game() {
                   </div>
                 </div>
               </div>
-
-              {/* Power word hints for this chapter */}
-              <div className="text-center">
-                <div className="text-[10px] uppercase opacity-40 font-bold tracking-widest mb-3">{t.ui.powerWords}</div>
-                <div className="flex flex-wrap justify-center gap-2">
-                  {Object.keys(chapter.manifestationWords).map(word => (
-                    <span
-                      key={word}
-                      className="px-3 py-1 text-[11px] border border-white/10 rounded text-white/40 tracking-widest"
-                    >
-                      {word}
-                    </span>
-                  ))}
-                </div>
-              </div>
             </div>
           )}
 
@@ -948,20 +1053,15 @@ export default function Game() {
               <p className="text-xl mb-10 opacity-80">
                 {chapter.id === 5 ? t.ui.wrongGuess : chapter.id === 6 ? t.ui.truth : t.ui.progress}
               </p>
-              <button
+              <button 
                 onClick={() => {
-                  typedTextRef.current = "";
-                  setTypedText("");
-                  setEnemies([]);
                   if (chapterIndex < t.chapters.length - 1) {
                     setChapterIndex(prev => prev + 1);
+                    setGameState('narrative');
                   } else {
-                    // Finished the final chapter: reset the whole case.
                     setChapterIndex(0);
-                    setRevolutionPoints(0);
-                    setUpgrades({ oiledKeys: 0, magicRibbon: 0, soundProofing: 0 });
+                    setGameState('narrative');
                   }
-                  setGameState('narrative');
                 }}
                 className="w-full px-8 py-5 bg-green-500 text-white font-black uppercase tracking-widest hover:bg-white hover:text-green-500 transition-all rounded-lg"
               >
@@ -981,9 +1081,7 @@ export default function Game() {
           </div>
           <div className="space-y-2">
             <div className="text-[10px] uppercase opacity-50 font-bold tracking-widest">{t.ui.accuracy}</div>
-            <div className="text-3xl font-display italic text-white">
-              {keystrokes === 0 ? "—" : `${Math.max(0, Math.round((1 - mistakes / keystrokes) * 100))}%`}
-            </div>
+            <div className="text-3xl font-display italic text-white">98%</div>
           </div>
           <div className="col-span-2 space-y-2">
             <div className="flex justify-between items-end">
@@ -1015,6 +1113,90 @@ export default function Game() {
           <span className="text-[10px] uppercase font-bold tracking-widest">Evidence: Secured</span>
         </div>
       </div>
+
+      {/* Game Loop Component */}
+      <GameLoop
+        lang={lang}
+        chapterIndex={chapterIndex}
+        typedText={typedText}
+        setTypedText={setTypedText}
+        manifestations={manifestations}
+        setManifestations={setManifestations}
+        enemies={enemies}
+        setEnemies={setEnemies}
+        gameState={gameState}
+        setGameState={setGameState}
+        shake={shake}
+        setShake={setShake}
+        isHeavy={isHeavy}
+        setIsHeavy={setIsHeavy}
+        isCold={isCold}
+        setIsCold={setIsCold}
+        isHeat={isHeat}
+        setIsHeat={setIsHeat}
+        isGravity={isGravity}
+        setIsGravity={setIsGravity}
+        isShielded={isShielded}
+        setIsShielded={setIsShielded}
+        isTimeSlowed={isTimeSlowed}
+        setIsTimeSlowed={setIsTimeSlowed}
+        isRaining={isRaining}
+        setIsRaining={setIsRaining}
+        isWaterPulse={isWaterPulse}
+        setIsWaterPulse={setIsWaterPulse}
+        isPoliceAlert={isPoliceAlert}
+        setIsPoliceAlert={setIsPoliceAlert}
+        bloodFlash={bloodFlash}
+        setBloodFlash={setBloodFlash}
+        redFlash={redFlash}
+        setRedFlash={setRedFlash}
+        stormFlash={stormFlash}
+        setStormFlash={setStormFlash}
+        darkFlash={darkFlash}
+        setDarkFlash={setDarkFlash}
+        ghostFog={ghostFog}
+        setGhostFog={setGhostFog}
+        windRush={windRush}
+        setWindRush={setWindRush}
+        revolutionPoints={revolutionPoints}
+        setRevolutionPoints={setRevolutionPoints}
+        upgrades={upgrades}
+        setUpgrades={setUpgrades}
+        chapter={chapter}
+        level={level}
+        rank={rank}
+        playSound={playSound}
+        triggerManifestation={triggerManifestation}
+        triggerKeywordEffect={triggerKeywordEffect}
+        startChapter={startChapter}
+        buyUpgrade={buyUpgrade}
+        t={t}
+        normalizeForMatch={normalizeForMatch}
+        KEYWORD_EFFECTS={KEYWORD_EFFECTS}
+        KEYWORD_COOLDOWN_MS={KEYWORD_COOLDOWN_MS}
+        audioCtxRef={audioCtxRef}
+        bgAudioRef={bgAudioRef}
+        enemiesRef={enemiesRef}
+        keywordCooldownRef={keywordCooldownRef}
+      />
+
+      {/* Typing Input Component */}
+      <TypingInput
+        gameState={gameState}
+        typedText={typedText}
+        setTypedText={setTypedText}
+        chapter={chapter}
+        triggerManifestation={triggerManifestation}
+        triggerKeywordEffect={triggerKeywordEffect}
+        playSound={playSound}
+        t={t}
+        normalizeForMatch={normalizeForMatch}
+        KEYWORD_EFFECTS={KEYWORD_EFFECTS}
+        KEYWORD_COOLDOWN_MS={KEYWORD_COOLDOWN_MS}
+        keywordCooldownRef={keywordCooldownRef}
+      />
     </div>
   );
 }
+
+export default Game;

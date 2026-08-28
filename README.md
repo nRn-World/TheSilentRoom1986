@@ -10,7 +10,8 @@
 
 ---
 
-### [▶ PLAY NOW](https://nrn-world.github.io/The-Silent-Room-1986/)
+### [▶ PLAY NOW](https://robinayzit.github.io/The-Silent-Room-1986)
+
 ---
 
 </div>
@@ -25,13 +26,18 @@ Uncover the truth behind Case #402 in this atmospheric mystery adventure.
 
 ## 🎯 Features
 
-- **6 Chapters** of noir storytelling
+- **15 Chapters** of noir storytelling (9 new chapters added!)
 - **3 Languages**: English, Swedish, and Turkish
 - **Retro CRT Aesthetic** with scanlines and glitch effects
-- **Typewriter Sound Effects** generated with WebAudio
+- **Atmospheric Soundtrack** with chapter-specific music
 - **Typewriter Mechanics** - type words to trigger manifestations
 - **Upgrade System** - enhance your detective's abilities
-- **A Twisting Finale** - uncover the truth behind Case #402
+- **Boss Fight System** - face 5 unique bosses with multi-phase battles
+- **Inventory System** - collect and equip weapons, armor, and accessories
+- **Item Shop** - purchase powerful items to aid your investigation
+- **Multiplayer Mode** - play with friends in Co-op, Versus, or Race modes
+- **New Manifestation Powers** - shadow, memory, void, echo, and destiny
+- **Multiple Endings** - discover the truth
 
 ---
 
@@ -40,24 +46,27 @@ Uncover the truth behind Case #402 in this atmospheric mystery adventure.
 1. **Start the Investigation** - Click "Start Investigation" to begin
 2. **Type Words** - Type the highlighted words from the story to manifest powers
 3. **Fight Enemies** - Use your manifestations to defeat enemies
-4. **Upgrade** - Collect points to upgrade your typewriter
-5. **Solve the Case** - Uncover the truth in 6 chapters
+4. **Face Bosses** - Battle unique bosses at the end of chapters
+5. **Upgrade** - Collect points to upgrade your typewriter
+6. **Collect Items** - Find and equip powerful items
+7. **Play Multiplayer** - Compete or cooperate with friends
+8. **Solve the Case** - Uncover the truth in 15 chapters
 
 ### Manifestation Powers
 
 | Word Type | Power |
 |-----------|-------|
 | rain | Rain confetti attack |
-| fire | Fire damage to all enemies |
+| fire | Fire damage |
 | light | Stun enemies |
-| ghost | Scares enemies into retreat |
+| ghost | Summon ghosts |
 | shield | Temporary protection |
 | time | Slow down time |
-| wall | Push enemies back |
-| tangle | Snare — shove back and slow enemies |
-| heavy | Crushing damage + screen press |
-| cold | Chilling freeze |
-| gravity | Lift enemies off the ground |
+| shadow | Shadow manipulation |
+| memory | Memory powers |
+| void | Void energy |
+| echo | Sound manipulation |
+| destiny | Fate control |
 
 ---
 
@@ -69,6 +78,7 @@ Uncover the truth behind Case #402 in this atmospheric mystery adventure.
 - **Motion** - Animations
 - **TypeScript** - Type safety
 - **Canvas Confetti** - Visual effects
+- **WebSocket** - Multiplayer communication
 
 ---
 
@@ -128,33 +138,15 @@ The-Silent-Room-1986/
 
 ## 🌐 Links
 
-- **Play Online**: [https://nRn-World.github.io/The-Silent-Room-1986](https://nrn-world.github.io/The-Silent-Room-1986/)
+- **Play Online**: https://RobinAyzit.github.io/The-Silent-Room-1986
+- **itch.io**: https://robinayzit.itch.io/the-silent-room-1986
+- **GitHub**: https://github.com/RobinAyzit/The-Silent-Room-1986
 
 ---
 
 ## 📝 License
 
-MIT License
-
-Copyright (c) 2026 nRn World
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+MIT License - Feel free to use and modify!
 
 ---
 
@@ -165,18 +157,3 @@ SOFTWARE.
 *"The truth is hidden in the mirror. This is the end of the story."*
 
 </div>
-
-👨‍💻 **Author**  
-Created 2026 by © nRn World
-
-📧 bynrnworld@gmail.com
-
-## 🙏 Support
-
-If you like this project, consider:
-
-* ⭐ Star the project on GitHub  
-* ☕ **Support development**: [Buy me a coffee 💜](https://ko-fi.com/nrnworld)  
-* 📢 Share with your friends
-
-Created by ❤️ © nRn World
