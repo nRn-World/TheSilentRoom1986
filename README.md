@@ -120,7 +120,7 @@ npm run deploy
 ## 📂 Project Structure
 
 ```
-The-Silent-Room-1986/
+TheSilentRoom1986/
 ├── src/
 │   ├── components/
 │   │   └── Game.tsx      # Main game component
