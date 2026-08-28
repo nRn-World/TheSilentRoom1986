@@ -1,3 +1,4 @@
+import type { GameState } from './types';
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
@@ -8,8 +9,8 @@ import {
 } from 'lucide-react';
 
 interface InventorySystemProps {
-  gameState: 'narrative' | 'playing' | 'gameover' | 'victory' | 'upgrading' | 'inventory' | 'shop';
-  setGameState: React.Dispatch<React.SetStateAction<'narrative' | 'playing' | 'gameover' | 'victory' | 'upgrading' | 'inventory' | 'shop'>>;
+  gameState: GameState;
+  setGameState: React.Dispatch<React.SetStateAction<GameState>>;
   revolutionPoints: number;
   setRevolutionPoints: React.Dispatch<React.SetStateAction<number>>;
   t: any;

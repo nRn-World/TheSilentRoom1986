@@ -1,3 +1,4 @@
+import type { GameState } from './types';
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
@@ -8,8 +9,8 @@ import {
 } from 'lucide-react';
 
 interface BossSystemProps {
-  gameState: 'narrative' | 'playing' | 'gameover' | 'victory' | 'upgrading' | 'inventory' | 'shop' | 'boss';
-  setGameState: React.Dispatch<React.SetStateAction<'narrative' | 'playing' | 'gameover' | 'victory' | 'upgrading' | 'inventory' | 'shop' | 'boss'>>;
+  gameState: GameState;
+  setGameState: React.Dispatch<React.SetStateAction<GameState>>;
   chapterIndex: number;
   typedText: string;
   revolutionPoints: number;

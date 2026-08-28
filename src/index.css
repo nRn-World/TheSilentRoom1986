@@ -5,6 +5,11 @@
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   --font-display: "Anton", sans-serif;
+  --animate-spin-slow: spin-slow 8s linear infinite;
+
+  @keyframes spin-slow {
+    to { transform: rotate(360deg); }
+  }
 }
 
 @keyframes scanline {
