@@ -22,6 +22,7 @@ import SettingsMenu from './game/SettingsMenu';
 import BossSystem from './game/BossSystem';
 import InventorySystem from './game/InventorySystem';
 import MultiplayerSystem from './game/MultiplayerSystem';
+import type { GameState } from './game/types';
 import { loadGameState, saveGameState, defaultGameState } from '../utils/persistence';
 
 function cn(...inputs: ClassValue[]) {
@@ -60,7 +61,6 @@ interface Enemy {
   maxHealth: number;
   speed: number;
   state: 'marching' | 'stunned' | 'retreating';
-  shielded?: boolean;
 }
 
 interface Upgrades {
@@ -131,6 +131,7 @@ const TRANSLATIONS: Record<Language, { ui: Record<string, string>, chapters: Cha
       detective: "Detective",
       truth: "The Truth",
       wrongGuess: "The Wrong Man",
+      powerWords: "Power Words",
     },
     chapters: [
       {
@@ -205,6 +206,7 @@ const TRANSLATIONS: Record<Language, { ui: Record<string, string>, chapters: Cha
       detective: "Detektiv",
       truth: "Sanningen",
       wrongGuess: "Fel Man",
+      powerWords: "Kraftord",
     },
     chapters: [
       {
@@ -219,7 +221,7 @@ const TRANSLATIONS: Record<Language, { ui: Record<string, string>, chapters: Cha
         title: "Ledtråden",
         goal: "Hitta det saknade beviset.",
         text: "Jag behöver mer ljus för att se bandet. Det finns en konstig lukt i luften. En nyckel lämnades kvar i mörkret.",
-        manifestationWords: { "ljus": "light", "nyckel": "open", "mörker": "ghost", "lukt": "tangle" }
+        manifestationWords: { "ljus": "light", "nyckel": "open", "mörkret": "ghost", "lukt": "tangle" }
       },
       {
         id: 3,
@@ -272,6 +274,7 @@ const TRANSLATIONS: Record<Language, { ui: Record<string, string>, chapters: Cha
       detective: "Dedektif",
       truth: "Gerçek",
       wrongGuess: "Yanlış Adam",
+      powerWords: "Güç Sözcükleri",
     },
     chapters: [
       {
@@ -279,7 +282,7 @@ const TRANSLATIONS: Record<Language, { ui: Record<string, string>, chapters: Cha
         title: "Ceset",
         goal: "Olay yerini incele.",
         text: "Yağmur kaldırımdaki kanı yıkıyor. Cesedi 402 numaralı odada buldum. Şehrin sessizliği gibi soğuktu.",
-        manifestationWords: { "yağmur": "rain", "kan": "blood", "ceset": "ghost", "soğuk": "cold" }
+        manifestationWords: { "yağmur": "rain", "kan": "blood", "cesedi": "ghost", "soğuk": "cold" }
       },
       {
         id: 2,
@@ -350,11 +353,12 @@ function Game() {
   const [typedText, setTypedText] = useState("");
   const [manifestations, setManifestations] = useState<Manifestation[]>([]);
   const [enemies, setEnemies] = useState<Enemy[]>([]);
-  const [gameState, setGameState] = useState<'narrative' | 'playing' | 'gameover' | 'victory' | 'upgrading' | 'settings' | 'inventory' | 'shop' | 'boss' | 'multiplayer'>('narrative');
+  const [gameState, setGameState] = useState<GameState>('narrative');
   const [shake, setShake] = useState(0);
   const [isHeavy, setIsHeavy] = useState(false);
   const [isCold, setIsCold] = useState(false);
   const [isHeat, setIsHeat] = useState(false);
+  const [isTangled, setIsTangled] = useState(false);
   const [isGravity, setIsGravity] = useState(false);
   const [isShielded, setIsShielded] = useState(false);
   const [isTimeSlowed, setIsTimeSlowed] = useState(false);
@@ -368,6 +372,9 @@ function Game() {
   const [ghostFog, setGhostFog] = useState(false);
   const [windRush, setWindRush] = useState(false);
   const [revolutionPoints, setRevolutionPoints] = useState(0);
+  const [keystrokes, setKeystrokes] = useState(0);
+  const [mistakes, setMistakes] = useState(0);
+  const [audioOn, setAudioOn] = useState(false);
   const [upgrades, setUpgrades] = useState<Upgrades>({
     oiledKeys: 0,
     magicRibbon: 0,
@@ -421,6 +428,11 @@ function Game() {
   const audioCtxRef = useRef<AudioContext | null>(null);
   const bgAudioRef = useRef<HTMLAudioElement | null>(null);
   const enemiesRef = useRef<Enemy[]>([]);
+  // Refs mirror the latest state so the game loop and the key handler always
+  // read fresh values without being re-registered on every keystroke.
+  const typedTextRef = useRef("");
+  const gameStateRef = useRef<GameState>(gameState);
+  const timeoutsRef = useRef<number[]>([]);
   const keywordCooldownRef = useRef<Record<KeywordEffectType, number>>({
     rain: 0,
     water: 0,
@@ -437,13 +449,18 @@ function Game() {
   });
 
   const initAudio = useCallback(() => {
-    if (!audioCtxRef.current) {
-      audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const existing = audioCtxRef.current;
+    const ctx = existing ?? new (window.AudioContext || (window as any).webkitAudioContext)();
+    if (!existing) {
+      ctx.onstatechange = () => setAudioOn(ctx.state === 'running');
+      audioCtxRef.current = ctx;
     }
-    if (audioCtxRef.current.state === 'suspended') {
-      audioCtxRef.current.resume();
+    if (ctx.state === 'suspended') {
+      void ctx.resume().then(() => setAudioOn(true)).catch(() => {});
+    } else {
+      setAudioOn(ctx.state === 'running');
     }
-    return audioCtxRef.current;
+    return ctx;
   }, []);
 
   // manage background music when the state changes
@@ -487,6 +504,29 @@ function Game() {
   useEffect(() => {
     enemiesRef.current = enemies;
   }, [enemies]);
+
+  useEffect(() => {
+    typedTextRef.current = typedText;
+  }, [typedText]);
+
+  useEffect(() => {
+    gameStateRef.current = gameState;
+  }, [gameState]);
+
+  // Manifestation/effect timers are registered so a restart can cancel
+  // pending ones (previously a quick restart could inherit old effects).
+  const schedule = useCallback((fn: () => void, ms: number) => {
+    const id = window.setTimeout(() => {
+      timeoutsRef.current = timeoutsRef.current.filter(i => i !== id);
+      fn();
+    }, ms);
+    timeoutsRef.current.push(id);
+  }, []);
+
+  const clearScheduled = useCallback(() => {
+    timeoutsRef.current.forEach(id => window.clearTimeout(id));
+    timeoutsRef.current = [];
+  }, []);
 
   const playSound = useCallback((type: 'click' | 'bell' | 'backspace' | 'glitch' | 'siren' | 'thunder') => {
     const ctx = initAudio();
@@ -571,7 +611,7 @@ function Game() {
 
   const pulseState = (setter: React.Dispatch<React.SetStateAction<boolean>>, duration: number) => {
     setter(true);
-    setTimeout(() => setter(false), duration);
+    schedule(() => setter(false), duration);
   };
 
   const triggerManifestation = useCallback((type: ManifestationType) => {
@@ -586,11 +626,11 @@ function Game() {
     };
     setManifestations(prev => [...prev, newManifestation]);
     setShake(15);
-    setTimeout(() => setShake(0), 150);
+    schedule(() => setShake(0), 150);
 
     if (type === 'light') {
       setEnemies(prev => prev.map(e => ({ ...e, state: 'stunned' })));
-      setTimeout(() => setEnemies(prev => prev.map(e => ({ ...e, state: 'marching' }))), 3000);
+      schedule(() => setEnemies(prev => prev.map(e => (e.state === 'stunned' ? { ...e, state: 'marching' } : e))), 3000);
     }
     if (type === 'rain') {
       pulseState(setIsRaining, 2500);
@@ -598,32 +638,45 @@ function Game() {
     }
     if (type === 'fire') {
       pulseState(setIsHeat, 2200);
-      setEnemies(prev => prev.map(e => ({ ...e, health: e.health - 100 })));
+      setEnemies(prev => prev.map(e => ({ ...e, health: Math.max(0, e.health - 100) })));
     }
     if (type === 'blood') {
       pulseState(setBloodFlash, 1800);
-      setEnemies(prev => prev.map(e => ({ ...e, health: e.health - 130 })));
+      setEnemies(prev => prev.map(e => ({ ...e, health: Math.max(0, e.health - 130) })));
     }
     if (type === 'cold') {
       setIsCold(true);
-      setTimeout(() => setIsCold(false), 4000);
+      schedule(() => setIsCold(false), 4000);
     }
     if (type === 'wall') {
       setEnemies(prev => prev.map(e => ({ ...e, x: Math.max(0, e.x - 20) })));
     }
+    if (type === 'tangle') {
+      // Snare: shoves enemies back, damages them and slows them while it holds.
+      setEnemies(prev => prev.map(e => ({ ...e, health: Math.max(0, e.health - 40), x: Math.max(0, e.x - 10) })));
+      setIsTangled(true);
+      schedule(() => setIsTangled(false), 4000);
+    }
+    if (type === 'ghost') {
+      // The ghost scares enemies into retreat for a while.
+      setEnemies(prev => prev.map(e => ({ ...e, state: 'retreating' })));
+      schedule(() => setEnemies(prev => prev.map(e => (e.state === 'retreating' ? { ...e, state: 'marching' } : e))), 2500);
+    }
     if (type === 'time') {
       setIsTimeSlowed(true);
-      setTimeout(() => setIsTimeSlowed(false), 5000);
+      schedule(() => setIsTimeSlowed(false), 5000);
     }
     if (type === 'gravity') {
       setIsGravity(true);
-      setTimeout(() => setIsGravity(false), 3000);
+      schedule(() => setIsGravity(false), 3000);
     }
     if (type === 'shield') {
       setIsShielded(true);
-      setTimeout(() => setIsShielded(false), 5000);
+      schedule(() => setIsShielded(false), 5000);
     }
     if (type === 'heavy') {
+      // Crushing blow: damage + shove, plus the screen press.
+      setEnemies(prev => prev.map(e => ({ ...e, health: Math.max(0, e.health - 60), x: Math.max(0, e.x - 5) })));
       pulseState(setIsHeavy, 1500);
     }
     if (type === 'heat') {
@@ -632,7 +685,7 @@ function Game() {
     if (type === 'mirror') {
       pulseState(setDarkFlash, 1800);
     }
-  }, [upgrades.magicRibbon]);
+  }, [upgrades.magicRibbon, schedule]);
 
   const triggerKeywordEffect = useCallback((effect: KeywordEffectType) => {
     if (effect === 'rain') triggerManifestation('rain');
@@ -671,13 +724,18 @@ function Game() {
 
   const startChapter = () => {
     initAudio();
+    // Cancel any manifestation/effect timers still pending from the previous run.
+    clearScheduled();
+    typedTextRef.current = "";
     setTypedText("");
     setManifestations([]);
     setEnemies([]);
+    gameStateRef.current = 'playing';
     setGameState('playing');
     setIsHeavy(false);
     setIsCold(false);
     setIsHeat(false);
+    setIsTangled(false);
     setIsGravity(false);
     setIsShielded(false);
     setIsTimeSlowed(false);
@@ -690,6 +748,8 @@ function Game() {
     setDarkFlash(false);
     setGhostFog(false);
     setWindRush(false);
+    setKeystrokes(0);
+    setMistakes(0);
   };
 
   return (
@@ -760,6 +820,8 @@ function Game() {
                 {m.type === 'mirror' && <div className="w-12 h-20 border-2 border-white/40 bg-white/10 rounded" />}
                 {m.type === 'wall' && <div className="w-6 h-40 bg-gray-800 border-2 border-gray-600 rounded" />}
                 {m.type === 'cold' && <Snowflake className="text-blue-200 w-16 h-16 animate-spin-slow" />}
+                {m.type === 'tangle' && <div className="w-20 h-20 rounded-full border-4 border-dashed border-purple-400/70 animate-spin-slow" />}
+                {m.type === 'heavy' && <div className="w-16 h-16 bg-gray-700 border-4 border-gray-500 rounded-lg animate-bounce shadow-2xl" />}
                 {m.type === 'shield' && <div className="w-32 h-32 border-4 border-blue-400/30 rounded-full animate-pulse" />}
                 {m.type === 'open' && <Unlock className="text-amber-400 w-12 h-12" />}
               </div>
@@ -819,11 +881,16 @@ function Game() {
           <div className="flex flex-col items-end gap-2">
             <div className="flex gap-2">
               {(['en', 'sv', 'tr'] as Language[]).map(l => (
-                <button 
+                <button
                   key={l}
-                  onClick={() => setLang(l)}
+                  disabled={gameState === 'playing'}
+                  onClick={(e) => {
+                    // Blur so Space/Enter during play can't re-trigger the button.
+                    e.currentTarget.blur();
+                    setLang(l);
+                  }}
                   className={cn(
-                    "px-2 py-1 text-[10px] border rounded transition-all",
+                    "px-2 py-1 text-[10px] border rounded transition-all disabled:opacity-40 disabled:cursor-not-allowed",
                     lang === l ? "bg-[#f27d26] text-black border-[#f27d26]" : "border-white/20 hover:border-white/50"
                   )}
                 >
@@ -835,7 +902,7 @@ function Game() {
               <div className="text-[10px] opacity-50 uppercase font-bold tracking-widest">{t.ui.points}: {revolutionPoints}</div>
               <div className="text-[10px] opacity-50 uppercase font-bold tracking-widest">LEVEL {level} // RANK {rank}</div>
               <div className="text-[8px] opacity-30 uppercase font-bold tracking-widest mt-1">
-                {t.ui.audio}: {audioCtxRef.current?.state === 'running' ? t.ui.active : t.ui.initAudio}
+                {t.ui.audio}: {audioOn ? t.ui.active : t.ui.initAudio}
               </div>
             </div>
           </div>
@@ -1021,6 +1088,21 @@ function Game() {
                   </div>
                 </div>
               </div>
+
+              {/* Power word hints for this chapter */}
+              <div className="text-center">
+                <div className="text-[10px] uppercase opacity-40 font-bold tracking-widest mb-3">{t.ui.powerWords}</div>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {Object.keys(chapter.manifestationWords).map(word => (
+                    <span
+                      key={word}
+                      className="px-3 py-1 text-[11px] border border-white/10 rounded text-white/40 tracking-widest"
+                    >
+                      {word}
+                    </span>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
 
@@ -1053,15 +1135,20 @@ function Game() {
               <p className="text-xl mb-10 opacity-80">
                 {chapter.id === 5 ? t.ui.wrongGuess : chapter.id === 6 ? t.ui.truth : t.ui.progress}
               </p>
-              <button 
+              <button
                 onClick={() => {
+                  typedTextRef.current = "";
+                  setTypedText("");
+                  setEnemies([]);
                   if (chapterIndex < t.chapters.length - 1) {
                     setChapterIndex(prev => prev + 1);
-                    setGameState('narrative');
                   } else {
+                    // Finished the final chapter: reset the whole case.
                     setChapterIndex(0);
-                    setGameState('narrative');
+                    setRevolutionPoints(0);
+                    setUpgrades({ oiledKeys: 0, magicRibbon: 0, soundProofing: 0 });
                   }
+                  setGameState('narrative');
                 }}
                 className="w-full px-8 py-5 bg-green-500 text-white font-black uppercase tracking-widest hover:bg-white hover:text-green-500 transition-all rounded-lg"
               >
@@ -1081,7 +1168,9 @@ function Game() {
           </div>
           <div className="space-y-2">
             <div className="text-[10px] uppercase opacity-50 font-bold tracking-widest">{t.ui.accuracy}</div>
-            <div className="text-3xl font-display italic text-white">98%</div>
+            <div className="text-3xl font-display italic text-white">
+              {keystrokes === 0 ? "—" : `${Math.max(0, Math.round((1 - mistakes / keystrokes) * 100))}%`}
+            </div>
           </div>
           <div className="col-span-2 space-y-2">
             <div className="flex justify-between items-end">
@@ -1118,8 +1207,8 @@ function Game() {
       <GameLoop
         lang={lang}
         chapterIndex={chapterIndex}
-        typedText={typedText}
         setTypedText={setTypedText}
+        typedTextRef={typedTextRef}
         manifestations={manifestations}
         setManifestations={setManifestations}
         enemies={enemies}
@@ -1134,6 +1223,8 @@ function Game() {
         setIsCold={setIsCold}
         isHeat={isHeat}
         setIsHeat={setIsHeat}
+        isTangled={isTangled}
+        setIsTangled={setIsTangled}
         isGravity={isGravity}
         setIsGravity={setIsGravity}
         isShielded={isShielded}
@@ -1169,7 +1260,6 @@ function Game() {
         triggerManifestation={triggerManifestation}
         triggerKeywordEffect={triggerKeywordEffect}
         startChapter={startChapter}
-        buyUpgrade={buyUpgrade}
         t={t}
         normalizeForMatch={normalizeForMatch}
         KEYWORD_EFFECTS={KEYWORD_EFFECTS}
@@ -1185,15 +1275,17 @@ function Game() {
         gameState={gameState}
         typedText={typedText}
         setTypedText={setTypedText}
+        typedTextRef={typedTextRef}
         chapter={chapter}
         triggerManifestation={triggerManifestation}
         triggerKeywordEffect={triggerKeywordEffect}
         playSound={playSound}
-        t={t}
         normalizeForMatch={normalizeForMatch}
         KEYWORD_EFFECTS={KEYWORD_EFFECTS}
         KEYWORD_COOLDOWN_MS={KEYWORD_COOLDOWN_MS}
         keywordCooldownRef={keywordCooldownRef}
+        setKeystrokes={setKeystrokes}
+        setMistakes={setMistakes}
       />
     </div>
   );

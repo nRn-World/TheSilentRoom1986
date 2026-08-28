@@ -1,3 +1,4 @@
+import type { GameState } from './types';
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
@@ -6,7 +7,7 @@ import {
   Users, Wifi, WifiOff, Trophy, Send, X, Plus, LogIn
 } from 'lucide-react';
 
-type GameStateType = 'narrative' | 'playing' | 'gameover' | 'victory' | 'upgrading' | 'inventory' | 'shop' | 'boss' | 'multiplayer';
+type GameStateType = GameState;
 
 interface MultiplayerSystemProps {
   gameState: GameStateType;

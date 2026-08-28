@@ -1,3 +1,4 @@
+import type { GameState } from './types';
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
@@ -5,8 +6,8 @@ import { twMerge } from 'tailwind-merge';
 import { Zap, Flame, Shield } from 'lucide-react';
 
 interface UpgradeSystemProps {
-  gameState: 'narrative' | 'playing' | 'gameover' | 'victory' | 'upgrading';
-  setGameState: React.Dispatch<React.SetStateAction<'narrative' | 'playing' | 'gameover' | 'victory' | 'upgrading'>>;
+  gameState: GameState;
+  setGameState: React.Dispatch<React.SetStateAction<GameState>>;
   upgrades: any;
   setUpgrades: React.Dispatch<React.SetStateAction<any>>;
   revolutionPoints: number;
@@ -31,7 +32,7 @@ const UpgradeSystem = ({
     const cost = (upgrades[key] + 1) * 150;
     if (revolutionPoints >= cost && upgrades[key] < 3) {
       setRevolutionPoints(prev => prev - cost);
-      setUpgrades(prev => ({ ...prev, [key]: prev[key] + 1 }));
+      setUpgrades((prev: any) => ({ ...prev, [key]: prev[key] + 1 }));
     }
   };
 

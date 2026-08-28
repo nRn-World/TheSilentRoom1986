@@ -1,10 +1,11 @@
+import type { GameState } from './types';
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { Volume2, Monitor, Accessibility, Save } from 'lucide-react';
 
-type GameStateType = 'narrative' | 'playing' | 'gameover' | 'victory' | 'upgrading' | 'settings' | 'inventory' | 'shop' | 'boss' | 'multiplayer';
+type GameStateType = GameState;
 
 interface SettingsMenuProps {
   gameState: GameStateType;

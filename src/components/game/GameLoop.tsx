@@ -1,11 +1,7 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import React, { useEffect } from 'react';
 import confetti from 'canvas-confetti';
 
-// Import types and constants from parent component
-// These will be passed as props initially, later we might move them to a shared types file
+import type { GameState } from './types';
 
 interface Enemy {
   id: string;
@@ -16,20 +12,19 @@ interface Enemy {
   maxHealth: number;
   speed: number;
   state: 'marching' | 'stunned' | 'retreating';
-  shielded?: boolean;
 }
 
 interface GameLoopProps {
   lang: 'en' | 'sv' | 'tr';
   chapterIndex: number;
-  typedText: string;
   setTypedText: React.Dispatch<React.SetStateAction<string>>;
+  typedTextRef: React.MutableRefObject<string>;
   manifestations: any[];
   setManifestations: React.Dispatch<React.SetStateAction<any[]>>;
   enemies: any[];
   setEnemies: React.Dispatch<React.SetStateAction<any[]>>;
-  gameState: 'narrative' | 'playing' | 'gameover' | 'victory' | 'upgrading' | 'settings' | 'inventory' | 'shop' | 'boss' | 'multiplayer';
-  setGameState: React.Dispatch<React.SetStateAction<'narrative' | 'playing' | 'gameover' | 'victory' | 'upgrading' | 'settings' | 'inventory' | 'shop' | 'boss' | 'multiplayer'>>;
+  gameState: GameState;
+  setGameState: React.Dispatch<React.SetStateAction<GameState>>;
   shake: number;
   setShake: React.Dispatch<React.SetStateAction<number>>;
   isHeavy: boolean;
@@ -38,6 +33,8 @@ interface GameLoopProps {
   setIsCold: React.Dispatch<React.SetStateAction<boolean>>;
   isHeat: boolean;
   setIsHeat: React.Dispatch<React.SetStateAction<boolean>>;
+  isTangled: boolean;
+  setIsTangled: React.Dispatch<React.SetStateAction<boolean>>;
   isGravity: boolean;
   setIsGravity: React.Dispatch<React.SetStateAction<boolean>>;
   isShielded: boolean;
@@ -73,7 +70,6 @@ interface GameLoopProps {
   triggerManifestation: (type: any) => void;
   triggerKeywordEffect: (effect: any) => void;
   startChapter: () => void;
-  buyUpgrade: (key: keyof any) => void;
   t: any;
   normalizeForMatch: (value: string) => string;
   KEYWORD_EFFECTS: any;
@@ -84,118 +80,76 @@ interface GameLoopProps {
   keywordCooldownRef: React.MutableRefObject<any>;
 }
 
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
-
 export const GameLoop = ({
-  lang,
   chapterIndex,
-  typedText,
   setTypedText,
-  manifestations,
+  typedTextRef,
   setManifestations,
-  enemies,
   setEnemies,
   gameState,
   setGameState,
-  shake,
-  setShake,
   isHeavy,
-  setIsHeavy,
-  isCold,
-  setIsCold,
-  isHeat,
-  setIsHeat,
-  isGravity,
-  setIsGravity,
-  isShielded,
-  setIsShielded,
+  isTangled,
   isTimeSlowed,
-  setIsTimeSlowed,
-  isRaining,
-  setIsRaining,
-  isWaterPulse,
-  setIsWaterPulse,
-  isPoliceAlert,
-  setIsPoliceAlert,
-  bloodFlash,
-  setBloodFlash,
-  redFlash,
-  setRedFlash,
-  stormFlash,
-  setStormFlash,
-  darkFlash,
-  setDarkFlash,
-  ghostFog,
-  setGhostFog,
-  windRush,
-  setWindRush,
-  revolutionPoints,
+  isShielded,
   setRevolutionPoints,
   upgrades,
-  setUpgrades,
   chapter,
   level,
   rank,
   playSound,
-  triggerManifestation,
-  triggerKeywordEffect,
-  startChapter,
-  buyUpgrade,
-  t,
-  normalizeForMatch,
-  KEYWORD_EFFECTS,
-  KEYWORD_COOLDOWN_MS,
-  audioCtxRef,
-  bgAudioRef,
-  enemiesRef,
-  keywordCooldownRef
+  enemiesRef
 }: GameLoopProps) => {
   // Game Loop
   useEffect(() => {
     if (gameState !== 'playing') return;
+    let ended = false;
 
     const interval = setInterval(() => {
+      if (ended || gameState !== 'playing') return;
+
       setManifestations(prev => prev.filter(m => Date.now() - m.startTime < m.duration));
 
-      // Move enemies
-      setEnemies(prev => {
-        const next = prev.map(e => {
-          if (e.state === 'stunned') return e;
-          let moveSpeed = e.speed;
-          if (isTimeSlowed) moveSpeed *= 0.3;
-          if (isHeavy) moveSpeed *= 0.88;
+      // Derive the next enemy state from the latest snapshot (kept in a ref,
+      // so this closure never goes stale and updaters stay pure — React
+      // StrictMode double-invokes updaters, which previously deleted two
+      // characters per censor tick and fired game over twice).
+      const snapshot = enemiesRef.current;
+      let deletedChars = 0;
 
-          // Censor Effect: Deletes text if close
-          if (e.type === 'censor' && e.x > 78 && Math.random() < 0.04) {
-            setTypedText(t => t.slice(0, -1));
-            playSound('glitch');
-          }
-
-          return { ...e, x: e.x + moveSpeed };
-        }).filter(e => e.health > 0);
-        
-        if (!isShielded && next.some(e => e.x > 85)) {
-          setGameState('gameover');
+      const moved = snapshot.map((e: Enemy) => {
+        // Censor Effect: deletes typed text when close (only while marching)
+        if (e.type === 'censor' && e.state === 'marching' && e.x > 78 && Math.random() < 0.04) {
+          deletedChars++;
         }
-        
-        return next;
-      });
+        if (e.state === 'stunned') return e;
+        if (e.state === 'retreating') return { ...e, x: Math.max(0, e.x - e.speed * 1.5) };
+        let moveSpeed = e.speed;
+        if (isTimeSlowed) moveSpeed *= 0.3;
+        if (isTangled) moveSpeed *= 0.5;
+        if (isHeavy) moveSpeed *= 0.88;
+        return { ...e, x: e.x + moveSpeed };
+      }).filter((e: Enemy) => e.health > 0);
+
+      if (deletedChars > 0) {
+        typedTextRef.current = typedTextRef.current.slice(0, -deletedChars);
+        setTypedText(typedTextRef.current);
+        playSound('glitch');
+      }
 
       // Spawn enemies with progressive level/rank scaling
       const chapterFactor = 1 + (chapterIndex * 0.25);
       const rankFactor = 1 + ((rank - 1) * 0.1);
       const spawnRate = Math.min(0.09, 0.002 * chapterFactor * rankFactor * (1 - upgrades.soundProofing * 0.12));
       const maxEnemies = 6 + chapterIndex * 2 + Math.floor(rank / 2);
-      if (enemiesRef.current.length < maxEnemies && Math.random() < spawnRate) {
+      if (moved.length < maxEnemies && Math.random() < spawnRate) {
         const typeRoll = Math.random();
         let type: Enemy['type'] = 'standard';
         let health = 60 + chapterIndex * 15 + rank * 5;
         let speed = 0.06 + chapterIndex * 0.015 + rank * 0.006 + Math.random() * 0.05;
 
         // Introduce enemy types progressively
-        const activeCensors = enemiesRef.current.filter(e => e.type === 'censor').length;
+        const activeCensors = moved.filter((e: Enemy) => e.type === 'censor').length;
         if (level >= 5 && typeRoll > 0.84 && activeCensors < 2) {
           type = 'censor';
           speed = 0.07 + (chapterIndex * 0.01);
@@ -209,8 +163,8 @@ export const GameLoop = ({
           speed = 0.05 + chapterIndex * 0.008;
         }
 
-        setEnemies(prev => [...prev, {
-          id: Math.random().toString(),
+        moved.push({
+          id: Math.random().toString(36).slice(2, 11),
           type,
           x: 0,
           y: Math.random() * 60 + 20,
@@ -218,13 +172,25 @@ export const GameLoop = ({
           maxHealth: health,
           speed,
           state: 'marching'
-        }]);
+        });
       }
 
-      // Check for victory – only when the player has typed every character and none are wrong
-      if (typedText.length >= chapter.text.length) {
-        const allCorrect = typedText.split('').every((ch, idx) => ch === chapter.text[idx]);
+      if (!isShielded && moved.some((e: Enemy) => e.x > 85)) {
+        ended = true;
+        setEnemies(moved);
+        setGameState('gameover');
+        return;
+      }
+
+      setEnemies(moved);
+
+      // Check for victory – only when the player has typed every character
+      // and none are wrong. `ended` guards the points against double-awarding.
+      const current = typedTextRef.current;
+      if (current.length >= chapter.text.length) {
+        const allCorrect = current.split('').every((ch, idx) => ch === chapter.text[idx]);
         if (allCorrect) {
+          ended = true;
           setGameState('victory');
           setRevolutionPoints(prev => prev + (chapter.id * 120) + (rank * 20));
           playSound('bell');
@@ -234,7 +200,9 @@ export const GameLoop = ({
     }, 50);
 
     return () => clearInterval(interval);
-  }, [gameState, typedText, chapter, chapterIndex, level, rank, isHeavy, isTimeSlowed, isShielded, upgrades.soundProofing, playSound]);
+    // typedText is intentionally NOT a dependency: the loop reads it from
+    // typedTextRef, so the interval no longer restarts on every keystroke.
+  }, [gameState, chapter, chapterIndex, level, rank, isHeavy, isTangled, isTimeSlowed, isShielded, upgrades.soundProofing, playSound, setManifestations, setEnemies, setGameState, setTypedText, setRevolutionPoints, typedTextRef, enemiesRef]);
 
   return null; // This component only handles logic, no UI
 };
