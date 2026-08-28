@@ -28,10 +28,10 @@ Uncover the truth behind Case #402 in this atmospheric mystery adventure.
 - **6 Chapters** of noir storytelling
 - **3 Languages**: English, Swedish, and Turkish
 - **Retro CRT Aesthetic** with scanlines and glitch effects
-- **Atmospheric Soundtrack** with chapter-specific music
+- **Typewriter Sound Effects** generated with WebAudio
 - **Typewriter Mechanics** - type words to trigger manifestations
 - **Upgrade System** - enhance your detective's abilities
-- **Multiple Endings** - discover the truth
+- **A Twisting Finale** - uncover the truth behind Case #402
 
 ---
 
@@ -48,11 +48,16 @@ Uncover the truth behind Case #402 in this atmospheric mystery adventure.
 | Word Type | Power |
 |-----------|-------|
 | rain | Rain confetti attack |
-| fire | Fire damage |
+| fire | Fire damage to all enemies |
 | light | Stun enemies |
-| ghost | Summon ghosts |
+| ghost | Scares enemies into retreat |
 | shield | Temporary protection |
 | time | Slow down time |
+| wall | Push enemies back |
+| tangle | Snare — shove back and slow enemies |
+| heavy | Crushing damage + screen press |
+| cold | Chilling freeze |
+| gravity | Lift enemies off the ground |
 
 ---
 
