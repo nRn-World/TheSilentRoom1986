@@ -10,7 +10,7 @@
 
 ---
 
-### [▶ PLAY NOW](https://nrn-world.github.io/The-Silent-Room-1986/)
+### [▶ PLAY NOW](https://nrn-world.github.io/TheSilentRoom1986/)
 ---
 
 </div>
