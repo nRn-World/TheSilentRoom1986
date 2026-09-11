@@ -6,3 +6,12 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# FotbollsVideoAnalys
+football-analyzer/.venv/
+football-analyzer/jobs/
+football-analyzer/samples/
+football-analyzer/work/
+football-analyzer/analys-*/
+__pycache__/
+*.pyc

@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>⚽ FotbollsVideoAnalys</title>
+<style>
+:root{
+  --bg:#0b1220; --bg2:#101a2e; --card:#141f36; --card2:#1a2745;
+  --line:#24314f; --txt:#e6edf7; --mut:#8fa3c4; --acc:#22c55e; --acc2:#38bdf8;
+  --warn:#eab308; --bad:#ef4444;
+}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,var(--bg),var(--bg2) 60%);
+  color:var(--txt);font:15px/1.5 system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:20px 16px 80px}
+header{display:flex;align-items:center;gap:12px;padding:14px 0 6px}
+header h1{font-size:22px;margin:0;letter-spacing:.3px}
+header .sub{color:var(--mut);font-size:13px}
+.logo{font-size:30px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;
+  padding:18px;margin:14px 0}
+.card h2{margin:0 0 10px;font-size:16px}
+.muted{color:var(--mut)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+input[type=text],input[type=url]{flex:1;min-width:260px;background:var(--bg);
+  border:1px solid var(--line);color:var(--txt);border-radius:10px;
+  padding:11px 13px;font-size:15px;outline:none}
+input:focus{border-color:var(--acc2)}
+button,.btn{background:var(--acc);color:#05230f;border:none;border-radius:10px;
+  padding:11px 18px;font-size:15px;font-weight:700;cursor:pointer}
+button:hover{filter:brightness(1.08)}
+button.sec,.btn.sec{background:var(--card2);color:var(--txt);border:1px solid var(--line)}
+button.small{padding:6px 10px;font-size:13px;border-radius:8px}
+button.danger{background:var(--card2);color:var(--bad);border:1px solid var(--line)}
+.tabs{display:flex;gap:8px;margin-bottom:12px}
+.tab{padding:8px 14px;border-radius:10px 10px 0 0;border:1px solid var(--line);
+  border-bottom:none;background:var(--bg);color:var(--mut);cursor:pointer;font-size:14px}
+.tab.active{color:var(--txt);background:var(--card)}
+.pane{display:none;border-top:1px solid var(--line);padding-top:12px}
+.pane.active{display:block}
+.progwrap{margin-top:12px;display:none}
+.pbar{height:10px;background:var(--bg);border:1px solid var(--line);border-radius:99px;overflow:hidden}
+.pbar>div{height:100%;width:0%;background:linear-gradient(90deg,var(--acc),var(--acc2));
+  transition:width .4s}
+.pmsg{font-size:13px;color:var(--mut);margin-top:6px}
+.err{background:#3a1420;border:1px solid #7f1d1d;color:#fecaca;border-radius:10px;
+  padding:12px;margin-top:10px;white-space:pre-wrap;font-size:13px;display:none}
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:10px}
+.stat{background:var(--card2);border:1px solid var(--line);border-radius:12px;
+  padding:12px;text-align:center}
+.stat .n{font-size:26px;font-weight:800}
+.stat .l{font-size:12px;color:var(--mut)}
+.stat .a{font-size:10px;color:var(--acc2);margin-top:2px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.chip{font-size:12px;padding:5px 10px;border-radius:99px;border:1px solid var(--line);
+  background:var(--card2);cursor:pointer;user-select:none;opacity:.32}
+.chip.on{opacity:1;border-color:currentColor}
+canvas{width:100%;border:1px solid var(--line);border-radius:12px;background:var(--bg);
+  display:block;cursor:crosshair}
+.player{width:100%;border-radius:12px;background:#000;min-height:320px;
+  display:flex;align-items:center;justify-content:center}
+iframe{width:100%;aspect-ratio:16/9;border:0;border-radius:12px}
+video{width:100%;max-height:520px;border-radius:12px;background:#000}
+.evlist{margin-top:6px}
+.ev{display:grid;grid-template-columns:86px 1fr auto;gap:10px;align-items:center;
+  padding:9px 10px;border:1px solid var(--line);border-radius:10px;margin:7px 0;
+  background:var(--card2);cursor:pointer}
+.ev:hover{border-color:var(--acc2)}
+.ev .t{font-weight:800;font-variant-numeric:tabular-nums}
+.ev .badge{display:inline-block;font-size:12px;font-weight:700;padding:3px 9px;
+  border-radius:99px;color:#08131f}
+.ev .src{font-size:10px;color:var(--mut);margin-left:6px}
+.ev .conf{font-size:10px;color:var(--mut)}
+.ev .note{width:100%;background:var(--bg);border:1px solid var(--line);
+  color:var(--txt);border-radius:8px;padding:6px 9px;font-size:13px;margin-top:5px}
+.ev .right{display:flex;gap:6px;align-items:center}
+.ev select{background:var(--bg);color:var(--txt);border:1px solid var(--line);
+  border-radius:8px;padding:6px;font-size:13px}
+.confbar{width:54px;height:6px;background:var(--bg);border-radius:99px;overflow:hidden}
+.confbar>div{height:100%}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--mut);margin-top:8px}
+.legend b{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px}
+.hint{font-size:12.5px;color:var(--mut);margin-top:8px}
+.headgrid{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+.thumb{width:170px;border-radius:10px;border:1px solid var(--line)}
+.tagchip{font-size:11px;border:1px dashed var(--line);color:var(--mut);
+  padding:3px 8px;border-radius:99px}
+@media (max-width:640px){ .ev{grid-template-columns:64px 1fr} .ev .right{grid-column:1/-1} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">⚽</div>
+    <div>
+      <h1>FotbollsVideoAnalys</h1>
+      <div class="sub">Analysera matcher & höjdpunkter: mål, målchanser, pip, kort – plus manuell märkning av assist, hörnor och tacklingar</div>
+    </div>
+  </header>
+
+  <div class="card">
+    <h2> Analysera en video</h2>
+    <div class="tabs">
+      <div class="tab active" data-k="url">YouTube-länk</div>
+      <div class="tab" data-k="up">Ladda upp fil</div>
+      <div class="tab" data-k="demo">Exempel</div>
+    </div>
+    <div class="pane active" data-k="url">
+      <div class="row">
+        <input type="url" id="url" placeholder="https://www.youtube.com/watch?v=…" spellcheck="false">
+        <button id="gourl">Analysera ▶</button>
+      </div>
+      <div class="hint">Laddar ner i upp till 720p och kör ljud- + bildanalys lokalt. Fungerar bäst med matchklipp/höjdpunkter (bild med score-tavla i hörnet ger bäst måldetektering). Obs: från servrar kan YouTube blockera nedladdning – använd då fliken ”Ladda upp fil”.</div>
+    </div>
+    <div class="pane" data-k="up">
+      <input type="file" id="file" accept="video/*,.mp4,.mkv,.webm,.mov" style="color:var(--mut)">
+      <div class="hint">Filen analyseras på servern och sparas bara i din jobbmapp.</div>
+    </div>
+    <div class="pane" data-k="demo">
+      <button id="demo">▶ Analysera exempelmet (syntetisk demo med 2 mål & 3 pip)</button>
+      <div class="hint">Bra för att se hur detekeringen fungerar – demovideon har kända händelser inbyggda.</div>
+    </div>
+    <div class="progwrap" id="progwrap">
+      <div class="pbar" id="pbar"><div></div></div>
+      <div class="pmsg" id="pmsg"></div>
+    </div>
+    <div class="err" id="err"></div>
+  </div>
+
+  <div id="report"></div>
+
+  <div class="card">
+    <h2> Hur detekeringen fungerar</h2>
+    <div class="muted" style="font-size:13.5px">
+      <p><b>🔊 Mål & målchanser:</b> ljudet analyseras 2 ggr/sek. En riktig måljour känns igen på snabb attack + hög topp + långsam avklingning (publik somsjunger ut). Om score-tavlan i bildhörnet dessutom ändrats inom ±35 s blir konfidensen hög.</p>
+      <p><b>🖥 Score-tavla:</b> programmet hittar själv den statiga rutan i bildens övre del och upptäcker sällsynta beständiga förändringar (målsiffra, kort) – utan OCR.</p>
+      <p><b>📣 Domarpip:</b> energi i 2,2–3,3 kHz som sticker ut över arenaljudet (avspark, foul, hörnedömande, avbrott).</p>
+      <p><b>📈 Rörelse & halvleker:</b> planen hittas via färganalys; rörelseenergin ger aktivitetskurvan och långa döda perioder avslöjar halvtid.</p>
+      <p><b>✍️ Manuell märkning:</b> assist, hörnor och tacklingar är svåra att se automatiskt – klicka ＋ Händelse här när du ser en, ändra typ i listan, exportera CSV/JSON. Allt sparas automatiskt.</p>
+    </div>
+  </div>
+</div>
+<script>
+"use strict";
+const TYPES=[
+ ["goal","Mål","#22c55e"],["assist","Assist","#4ade80"],["corner","Hörna","#38bdf8"],
+ ["tackle","Tackling","#f97316"],["chance","Målchans","#eab308"],["shot","Avslut","#a3e635"],
+ ["save","Räddning","#34d399"],["foul","Foul/Frispark","#fb7185"],["offside","Offside","#c084fc"],
+ ["yellow","Gult kort","#facc15"],["red","Rött kort","#ef4444"],["whistle","Domarpip","#94a3b8"],
+ ["board","Tavlaändring","#64748b"],["kickoff","Avspark","#60a5fa"],["halftime","Halvtid","#60a5fa"],
+ ["fulltime","Fulltid","#60a5fa"],["other","Övrigt","#cbd5e1"]];
+const TMAP=Object.fromEntries(TYPES.map(t=>[t[0],{lab:t[1],col:t[2]}]));
+const STAT_KEYS=["goal","assist","corner","tackle","chance","shot","save","yellow","red"];
+const STAT_AUTO_COUNTS={"goal":true,"yellow":true,"red":true};
+
+function tmap(k){return TMAP[k]||TMAP.other;}
+function effType(ev){return ev.user_type||ev.type;}
+function fmtT(s){s=Math.max(0,Math.round(s));const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;
+  return (h?h+":"+String(m).padStart(2,"0"):m)+":"+String(x).padStart(2,"0");}
+function esc(x){return String(x==null?"":x).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+
+let PLAYER=null, YTID=null, DATA=null, API=null, EVENTS=[], FILTERS=null, CHART=null;
+
+function seek(t){
+  if(YTID){ const f=document.getElementById("ytf");
+    if(f){ f.src="https://www.youtube-nocookie.com/embed/"+YTID+"?start="+Math.floor(t)+"&autoplay=1&rel=0"; } }
+  else if(PLAYER){ try{PLAYER.currentTime=t; PLAYER.play();}catch(e){} }
+}
+
+function statsRows(){
+  const rows=[];
+  for(const k of STAT_KEYS){
+    const evs=EVENTS.filter(e=>effType(e)===k);
+    const auto=evs.filter(e=>e.auto).length;
+    rows.push({k,n:evs.length,auto,lab:tmap(k).lab,col:tmap(k).col,showAuto:!!STAT_AUTO_COUNTS[k]});
+  }
+  return rows;
+}
+
+function renderStats(){
+  const el=document.getElementById("stats"); if(!el) return;
+  el.innerHTML=statsRows().map(r=>
+    `<div class="stat"><div class="n" style="color:${r.col}">${r.n}</div>
+     <div class="l">${r.lab}</div>${r.showAuto?`<div class="a">${r.auto?r.auto+" auto":"–"}</div>`:""}</div>`).join("");
+}
+
+function drawChart(){
+  const cv=document.getElementById("chart"); if(!cv||!DATA) return;
+  const dpr=window.devicePixelRatio||1;
+  const W=cv.clientWidth, H=260;
+  cv.width=W*dpr; cv.height=H*dpr;
+  const g=cv.getContext("2d"); g.scale(dpr,dpr);
+  const dur=DATA.video.duration||1;
+  const pad={l:34,r:10,t:12,b:22};
+  const X=t=>pad.l+(t/dur)*(W-pad.l-pad.r);
+  const db=DATA.curves.db||[], tdb=DATA.curves.t_db||[];
+  const mo=DATA.curves.motion||[], tm=DATA.curves.t_motion||[];
+  const base=DATA.curves.baseline||[];
+  let lo=Math.max(-80,Math.min(...db,0)), hi=Math.max(...db,1);
+  const Y=v=>H-pad.b-((v-lo)/Math.max(1,hi-lo))*(H-pad.t-pad.b);
+  g.clearRect(0,0,W,H);
+
+  // grid + tidslinje
+  g.strokeStyle="#1c2942"; g.fillStyle="#5f7396"; g.font="10px system-ui"; g.lineWidth=1;
+  const stepT=dur>3600?900:dur>1200?600:60;
+  for(let t=0;t<=dur;t+=stepT){ g.beginPath();g.moveTo(X(t),pad.t);g.lineTo(X(t),H-pad.b);g.stroke();
+    g.fillText(fmtT(t),X(t)-12,H-7); }
+
+  // halvtid
+  (DATA.halves||[]).forEach(h=>{ if(h.t>0){ g.strokeStyle="#3b82f6"; g.setLineDash([4,4]);
+    g.beginPath();g.moveTo(X(h.t),pad.t);g.lineTo(X(h.t),H-pad.b);g.stroke(); g.setLineDash([]);
+    g.fillText(h.name,X(h.t)+4,pad.t+10);} });
+
+  // rörelse (tunn linje)
+  if(mo.length>1){ g.strokeStyle="#334c7a"; g.beginPath();
+    for(let i=0;i<mo.length;i++){ const x=X(tm[i]),y=H-pad.b-(mo[i]/255)*(H-pad.t-pad.b)*0.9;
+      i?g.lineTo(x,y):g.moveTo(x,y);} g.stroke(); }
+
+  // db-område
+  if(db.length>1){
+    const grd=g.createLinearGradient(0,pad.t,0,H-pad.b);
+    grd.addColorStop(0,"rgba(56,189,248,.35)");grd.addColorStop(1,"rgba(56,189,248,.03)");
+    g.beginPath(); g.moveTo(X(tdb[0]),Y(db[0]));
+    for(let i=1;i<db.length;i++) g.lineTo(X(tdb[i]),Y(db[i]));
+    g.lineTo(X(tdb[tdb.length-1]),H-pad.b); g.lineTo(X(tdb[0]),H-pad.b); g.closePath();
+    g.fillStyle=grd; g.fill();
+    g.strokeStyle="#38bdf8"; g.beginPath();
+    for(let i=0;i<db.length;i++){ const x=X(tdb[i]),y=Y(db[i]); i?g.lineTo(x,y):g.moveTo(x,y);} g.stroke();
+    // baslinje
+    g.strokeStyle="#eab308"; g.setLineDash([3,4]); g.beginPath();
+    for(let i=0;i<db.length;i++){ const x=X(tdb[i]),y=Y(base[i]); i?g.lineTo(x,y):g.moveTo(x,y);} g.stroke();
+    g.setLineDash([]);
+  }
+
+  // händelsemarkörer
+  for(const e of EVENTS){
+    if(FILTERS&&!FILTERS.has(effType(e))) continue;
+    const c=tmap(effType(e)).col, x=X(e.t);
+    const strong=e.type==="goal"||e.conf>=0.5;
+    g.strokeStyle=c; g.globalAlpha=strong?0.95:0.55; g.lineWidth=strong?2.5:1.5;
+    g.beginPath(); g.moveTo(x,pad.t); g.lineTo(x,H-pad.b); g.stroke();
+    g.globalAlpha=1; g.fillStyle=c;
+    g.beginPath(); g.arc(x,pad.t+4,strong?4:2.5,0,7); g.fill();
+  }
+  // hoverlinje
+  if(CHART&&CHART.hover!=null){ g.strokeStyle="#94a3b8"; g.globalAlpha=.5;
+    g.beginPath();g.moveTo(CHART.hover,pad.t);g.lineTo(CHART.hover,H-pad.b);g.stroke(); g.globalAlpha=1; }
+
+  cv.onmousemove=ev=>{ const r=cv.getBoundingClientRect();
+    CHART=CHART||{}; CHART.hover=ev.clientX-r.left;
+    const t=(CHART.hover-pad.l)/(W-pad.l-pad.r)*dur;
+    const tip=document.getElementById("charttip");
+    if(tip) tip.textContent=fmtT(Math.max(0,Math.min(dur,t)));
+    drawChart(); };
+  cv.onmouseleave=()=>{ CHART&&(CHART.hover=null); drawChart(); };
+  cv.onclick=ev=>{ const r=cv.getBoundingClientRect();
+    const t=(ev.clientX-r.left-pad.l)/(W-pad.l-pad.r)*dur;
+    seek(Math.max(0,Math.min(dur,t))); };
+}
+
+function renderEvents(){
+  const el=document.getElementById("evlist"); if(!el) return;
+  const q=(document.getElementById("evsearch")||{}).value||"";
+  const rows=[];
+  for(const e of EVENTS){
+    const k=effType(e);
+    if(FILTERS&&!FILTERS.has(k)) continue;
+    if(q&&!( (e.label||"")+(e.note||"")+(tmap(k).lab) ).toLowerCase().includes(q.toLowerCase())) continue;
+    const c=tmap(k).col;
+    const src=(e.sources||[]).map(s=>({audio:"🔊",board:"🖥",whistle:"📣",motion:"📈",time:"⏱"}[s]||s)).join("");
+    const sel=`<select data-id="${e.id}" class="evtype">`+TYPES.map(t=>
+      `<option value="${t[0]}" ${t[0]===k?"selected":""}>${t[1]}</option>`).join("")+`</select>`;
+    rows.push(`<div class="ev" data-id="${e.id}">
+      <div class="t" style="color:${c}">${fmtT(e.t)}</div>
+      <div>
+        <span class="badge" style="background:${c}">${tmap(k).lab}</span>
+        ${e.auto?"":'<span class="tagchip">manuell</span>'}
+        <span class="src">${src}</span>
+        <span class="conf"> · ${Math.round((e.conf||0)*100)}%</span>
+        <div class="confbar"><div style="width:${Math.round((e.conf||0)*100)}%;background:${c}"></div></div>
+        <div class="muted" style="font-size:12px;margin-top:3px">${esc(e.detail||"")}</div>
+        <input class="note" data-id="${e.id}" placeholder="anteckning…" value="${esc(e.note||"")}">
+      </div>
+      <div class="right">${sel}<button class="small danger evdel" data-id="${e.id}">✕</button></div>
+    </div>`);
+  }
+  el.innerHTML=rows.join("")||'<div class="muted">Inga händelser med aktuella filter.</div>';
+  el.querySelectorAll(".evtype").forEach(s=>s.onchange=()=>{ setEvent(s.dataset.id,e=>e.user_type=s.value); renderEvents();renderStats(); save(); });
+  el.querySelectorAll(".note").forEach(n=>n.onchange=()=>{ setEvent(n.dataset.id,e=>e.note=n.value); save(); });
+  el.querySelectorAll(".evdel").forEach(b=>b.onclick=ev=>{ ev.stopPropagation();
+    EVENTS=EVENTS.filter(e=>String(e.id)!==String(b.dataset.id)); renderEvents();renderStats(); save(); });
+  el.querySelectorAll(".ev").forEach(r=>r.onclick=ev=>{
+    if(ev.target.closest("select,input,button")) return;
+    const e=EVENTS.find(x=>String(x.id)===String(r.dataset.id)); if(e) seek(e.t); });
+}
+
+function setEvent(id,fn){ const e=EVENTS.find(x=>String(x.id)===String(id)); if(e){fn(e);} }
+
+function addEventAt(){
+  let t=0;
+  if(PLAYER&&!YTID) t=PLAYER.currentTime||0;
+  else t=parseFloat(prompt("Tid i sekunder:","0"))||0;
+  const id=Math.max(0,...EVENTS.map(e=>Number(e.id)||0))+1;
+  EVENTS.push({id,t:Math.round(t*10)/10,type:"other",label:"Manuell händelse",conf:1,
+    sources:["manual"],detail:"Tillagd manuellt.",auto:false,user_type:"other",note:""});
+  EVENTS.sort((a,b)=>a.t-b.t);
+  renderEvents(); renderStats(); save();
+}
+
+function save(){
+  if(!API) return;
+  clearTimeout(save._t);
+  document.getElementById("savestate").textContent="sparar…";
+  save._t=setTimeout(()=>{
+    fetch(API+"/annotations",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({events:EVENTS})})
+      .then(r=>r.json()).then(j=>{
+        document.getElementById("savestate").textContent=j.ok?"sparat ✓":"kunde inte spara";
+        setTimeout(()=>{const el=document.getElementById("savestate"); if(el) el.textContent="";},2500);
+      }).catch(()=>{document.getElementById("savestate").textContent="sparingsfel";});
+  },600);
+}
+
+function exportJSON(){
+  const blob=new Blob([JSON.stringify({...DATA,events:EVENTS},null,1)],{type:"application/json"});
+  dl(blob,"analys.json");
+}
+function exportCSV(){
+  const rows=[["tid_s","tid","typ","etikett","konfidens","kallor","auto","anteckning"]];
+  for(const e of EVENTS) rows.push([e.t,fmtT(e.t),effType(e),tmap(effType(e)).lab,e.conf,
+    (e.sources||[]).join("+"),e.auto?"auto":"manuell",e.note||""]);
+  const csv=rows.map(r=>r.map(x=>'"'+String(x).replace(/"/g,'""')+'"').join(",")).join("\n");
+  dl(new Blob(["\ufeff"+csv],{type:"text/csv"}),"analys.csv");
+}
+function dl(blob,name){ const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob); a.download=name; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),4000); }
+
+function renderReport(root,data,ctx){
+  DATA=data; API=ctx.api||null; YTID=ctx.youtubeId||null; EVENTS=JSON.parse(JSON.stringify(data.events||[]));
+  FILTERS=new Set(TYPES.map(t=>t[0]));
+  const v=data.video, s=data.source;
+  const kindLbl={youtube:"YouTube",file:"Lokal fil",sample:"Exempel"}[s.kind]||s.kind;
+
+  root.innerHTML=`
+  <div class="card">
+    <div class="headgrid">
+      ${ctx.thumb?`<img class="thumb" src="${ctx.thumb}" onerror="this.remove()">`:""}
+      <div style="flex:1;min-width:240px">
+        <h2 style="font-size:18px">${esc(s.title||"Analys")}</h2>
+        <div class="muted" style="font-size:13px">
+          ${kindLbl}${s.url?` · <a style="color:var(--acc2)" href="${esc(s.url)}" target="_blank" rel="noopener">källa</a>`:""}
+          · ${fmtT(v.duration)} · ${v.width}×${v.height} · ${data.created.slice(0,16).replace("T"," ")}
+        </div>
+        <div class="chips" id="detectchips"></div>
+      </div>
+    </div>
+    <div id="playerbox" style="margin-top:12px"></div>
+  </div>
+  <div class="card"><h2>📊 Statistik</h2><div class="stats" id="stats"></div>
+    <div class="hint">Mål, kort och tavlebyten detekteras automatiskt. Assister, hörnor och tacklingar
+    lägger du till snabbt själv: spela upp videon och tryck <b>＋ Händelse här</b> vid rätt tidpunkt.</div></div>
+  <div class="card"><h2>📈 Signalkurvor & tidslinje</h2>
+    <canvas id="chart" height="260"></canvas>
+    <div class="row" style="justify-content:space-between">
+      <div class="legend">
+        <span><b style="background:#38bdf8"></b>Ljudnivå (dB)</span>
+        <span><b style="background:#eab308"></b>Baslinje (arenaljud)</span>
+        <span><b style="background:#334c7a"></b>Rörelse på plan</span>
+        <span id="charttip" style="margin-left:auto;font-variant-numeric:tabular-nums">–:––</span>
+      </div>
+    </div>
+    <div class="hint">Klicka i diagrammet för att hoppa i videon. Vertikala streck = händelser.</div>
+  </div>
+  <div class="card">
+    <div class="row" style="justify-content:space-between">
+      <h2>📋 Händelser <span class="muted" style="font-size:13px" id="evcount"></span></h2>
+      <div class="row">
+        <span id="savestate" class="muted" style="font-size:12px"></span>
+        <button class="sec small" onclick="exportCSV()">⬇ CSV</button>
+        <button class="sec small" onclick="exportJSON()">⬇ JSON</button>
+        <button class="small" onclick="addEventAt()">＋ Händelse här</button>
+      </div>
+    </div>
+    <input type="text" id="evsearch" placeholder="filtrera händelser…" style="width:100%;margin-top:6px">
+    <div class="chips" id="filters"></div>
+    <div class="evlist" id="evlist"></div>
+  </div>`;
+
+  // detektorchips
+  const d=data.detectors||{};
+  const chips=[
+    d.audio?["🔊 Ljudanalys",true]:null,
+    d.board_found?["🖥 Score-tavla hittad",true]:["🖥 Ingen score-tavla",(false)],
+    `${d.n_audio_peaks||0} ljudtoppar`,`${d.n_whistles||0} pip`,`🎯 ${EVENTS.length} händelser`
+  ].filter(Boolean);
+  document.getElementById("detectchips").innerHTML=chips.map(c=>typeof c==="string"
+    ?`<span class="tagchip">${c}</span>`
+    :`<span class="tagchip" style="${c[1]?"color:var(--acc);border-color:var(--acc)":"color:var(--mut)"}">${c[0]}</span>`).join("");
+
+  // spelare
+  const pb=document.getElementById("playerbox");
+  if(YTID){ pb.innerHTML=`<iframe id="ytf" src="https://www.youtube-nocookie.com/embed/${YTID}?rel=0" allow="autoplay; encrypted-media" allowfullscreen></iframe>`; }
+  else if(ctx.videoUrl){ pb.innerHTML=`<video id="player" src="${ctx.videoUrl}" controls preload="metadata"></video>`; }
+  else { pb.innerHTML=`<div class="player muted">Videon kan spelas upp via servern – öppna analysen i webbgränssnittet, eller använd tidsstämplarna nedan.</div>`; }
+  PLAYER=document.getElementById("player");
+  if(PLAYER) PLAYER.addEventListener("timeupdate",()=>{ const t=document.getElementById("charttip");
+    if(t) t.textContent=fmtT(PLAYER.currentTime); });
+
+  // filter
+  const fl=document.getElementById("filters");
+  fl.innerHTML=TYPES.map(t=>`<span class="chip on" data-k="${t[0]}" style="color:${t[2]}">${t[1]}</span>`).join("");
+  fl.querySelectorAll(".chip").forEach(ch=>ch.onclick=()=>{ const k=ch.dataset.k;
+    if(FILTERS.has(k)) FILTERS.delete(k); else FILTERS.add(k);
+    ch.classList.toggle("on"); renderEvents(); drawChart(); });
+
+  document.getElementById("evsearch").oninput=()=>renderEvents();
+  document.getElementById("evcount").textContent=`(${EVENTS.length})`;
+
+  renderStats(); renderEvents(); drawChart();
+  window.addEventListener("resize",()=>{ clearTimeout(window._rz); window._rz=setTimeout(drawChart,150); });
+}
+</script>
+<script>
+"use strict";
+let JOBID=null, POLL=null;
+
+function $(id){return document.getElementById(id);}
+function showPane(k){
+  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.k===k));
+  document.querySelectorAll(".pane").forEach(p=>p.classList.toggle("active",p.dataset.k===k));
+}
+function setError(msg){
+  const e=$("err"); e.style.display=msg?"block":"none"; if(msg) e.textContent=msg;
+}
+function startJob(body,isForm){
+  setError(""); $("progwrap").style.display="block"; setProg(0.01,"Startar…");
+  $("report").innerHTML="";
+  const opts=isForm?{method:"POST",body}: {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)};
+  fetch("/api/analyze",opts).then(r=>r.json().then(j=>({s:r.status,j}))).then(({s,j})=>{
+    if(!j.job_id) throw new Error(j.error||"Kunde inte starta analysen");
+    JOBID=j.job_id; poll();
+  }).catch(e=>{ $("progwrap").style.display="none"; setError(String(e.message||e)); });
+}
+function setProg(p,msg){ $("pbar").firstElementChild.style.width=Math.round(p*100)+"%"; if(msg)$("pmsg").textContent=msg; }
+function poll(){
+  clearInterval(POLL);
+  POLL=setInterval(()=>{
+    fetch("/api/job/"+JOBID).then(r=>r.json()).then(j=>{
+      setProg(j.pct||0,j.msg||"");
+      if(j.status==="error"){ clearInterval(POLL); $("progwrap").style.display="none"; setError(j.error||"Okänt fel"); }
+      else if(j.status==="done"){ clearInterval(POLL); $("progwrap").style.display="none"; loadReport(); }
+    }).catch(()=>{});
+  },1200);
+}
+function loadReport(){
+  fetch(`/api/job/${JOBID}/report.json`).then(r=>r.json()).then(data=>{
+    const yt=data.source.kind==="youtube"?data.source.video_id:null;
+    const ctx={ api:`/api/job/${JOBID}`,
+      videoUrl: yt?null:`/api/job/${JOBID}/video`,
+      youtubeId: yt, thumb:`/api/job/${JOBID}/thumb.jpg` };
+    renderReport($("report"),data,ctx);
+    $("report").scrollIntoView({behavior:"smooth"});
+  }).catch(e=>setError("Kunde inte läsa rapporten: "+e));
+}
+
+window.addEventListener("DOMContentLoaded",()=>{
+  document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>showPane(t.dataset.k));
+  $("gourl").onclick=()=>{
+    const u=$("url").value.trim();
+    if(!/^https?:\/\//.test(u)){ setError("Klistra in en giltig URL (https://…)"); return; }
+    startJob({url:u});
+  };
+  $("url").addEventListener("keydown",e=>{ if(e.key==="Enter") $("gourl").click(); });
+  $("file").addEventListener("change",()=>{
+    const f=$("file").files[0]; if(!f) return;
+    const fd=new FormData(); fd.append("file",f);
+    setProg(0.005,"Laddar upp "+f.name+"…");
+    startJob(fd,true);
+  });
+  $("demo").onclick=()=>startJob({sample:"demo"});
+});
+</script>
+</body>
+</html>

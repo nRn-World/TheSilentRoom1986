@@ -175,3 +175,17 @@ If you like this project, consider:
 * 📢 Share with your friends
 
 Created by ❤️ © nRn World
+
+---
+
+## ⚽ FotbollsVideoAnalys
+
+Ett separat verktyg i denna repo: **[`football-analyzer/`](football-analyzer/)** – analysera
+fotbollsvideor från YouTube (eller lokala filer) och räkna mål, målchanser, domarpip och
+kort-kandidater automatiskt via ljud- + bildanalys, med interaktiv tidslinje och manuell
+märkning av assist, hörnor och tacklingar.
+
+```bash
+cd football-analyzer && bash setup.sh
+.venv/bin/python -m fva serve        # webbgränssnitt: http://localhost:8000
+```
