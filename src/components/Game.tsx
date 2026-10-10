@@ -227,14 +227,14 @@ const TRANSLATIONS: Record<Language, { ui: Record<string, string>, chapters: Cha
         title: "Ceset",
         goal: "Olay yerini incele.",
         text: "Yağmur kaldırımdaki kanı yıkıyor. Cesedi 402 numaralı odada buldum. Şehrin sessizliği gibi soğuktu.",
-        manifestationWords: { "yağmur": "rain", "kan": "fire", "ceset": "ghost", "soğuk": "cold" }
+        manifestationWords: { "yağmur": "rain", "kan": "fire", "cesedi": "ghost", "soğuk": "cold" }
       },
       {
         id: 2,
         title: "İpucu",
         goal: "Eksik kanıtı bul.",
         text: "Şeridi görmek için daha fazla ışığa ihtiyacım var. Havada garip bir koku var. Karanlıkta bir anahtar bırakılmış.",
-        manifestationWords: { "ışık": "light", "anahtar": "open", "karanlık": "ghost", "koku": "tangle" }
+        manifestationWords: { "ışığa": "light", "anahtar": "open", "karanlık": "ghost", "koku": "tangle" }
       },
       {
         id: 3,
@@ -308,6 +308,9 @@ export default function Game() {
   const [isTimeSlowed, setIsTimeSlowed] = useState(false);
   const [scrambleAmount, setScrambleAmount] = useState(0);
   const [revolutionPoints, setRevolutionPoints] = useState(0);
+  const [totalKeystrokes, setTotalKeystrokes] = useState(0);
+  const [correctKeystrokes, setCorrectKeystrokes] = useState(0);
+  const [isAudioRunning, setIsAudioRunning] = useState(false);
   const [upgrades, setUpgrades] = useState<Upgrades>({
     oiledKeys: 0,
     magicRibbon: 0,
@@ -316,6 +319,17 @@ export default function Game() {
   
   const t = TRANSLATIONS[lang];
   const chapter = t.chapters[chapterIndex];
+
+  // Language switch handler
+  const handleLanguageChange = (newLang: Language) => {
+    setLang(newLang);
+    setTypedText("");
+    setManifestations([]);
+    setEnemies([]);
+    setGameState('narrative');
+    setTotalKeystrokes(0);
+    setCorrectKeystrokes(0);
+  };
 
   // Audio Logic
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -326,6 +340,9 @@ export default function Game() {
     }
     if (audioCtxRef.current.state === 'suspended') {
       audioCtxRef.current.resume();
+    }
+    if (audioCtxRef.current.state === 'running') {
+      setIsAudioRunning(true);
     }
     return audioCtxRef.current;
   }, []);
@@ -412,6 +429,24 @@ export default function Game() {
       setIsCold(true);
       setTimeout(() => setIsCold(false), 4000);
     }
+    if (type === 'heat') {
+      setIsHeat(true);
+      setEnemies(prev => prev.map(e => ({ ...e, health: e.health - 50 })));
+      setTimeout(() => setIsHeat(false), 4000);
+    }
+    if (type === 'heavy') {
+      setIsHeavy(true);
+      setTimeout(() => setIsHeavy(false), 4000);
+    }
+    if (type === 'tangle') {
+      setEnemies(prev => prev.map(e => ({ ...e, speed: e.speed * 0.5 })));
+    }
+    if (type === 'blood') {
+      setEnemies(prev => prev.map(e => ({ ...e, health: e.health - 75 })));
+    }
+    if (type === 'mirror') {
+      setEnemies(prev => prev.map(e => ({ ...e, x: Math.max(0, e.x - 40) })));
+    }
     if (type === 'wall') {
       setEnemies(prev => prev.map(e => ({ ...e, x: Math.max(0, e.x - 20) })));
     }
@@ -433,6 +468,7 @@ export default function Game() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (gameState !== 'playing') return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
       
       if (e.key === 'Backspace') {
         playSound('backspace');
@@ -446,6 +482,15 @@ export default function Game() {
         setTypedText(prev => {
           const next = prev + char;
           
+          setTotalKeystrokes(k => k + 1);
+          const index = prev.length;
+          if (index < chapter.text.length && char === chapter.text[index]) {
+            setCorrectKeystrokes(k => k + 1);
+            if (upgrades.oiledKeys > 0) {
+              setRevolutionPoints(pts => pts + upgrades.oiledKeys);
+            }
+          }
+
           // Check for manifestation words
           Object.entries(chapter.manifestationWords).forEach(([word, type]) => {
             if (next.toLowerCase().endsWith(word.toLowerCase())) {
@@ -460,7 +505,7 @@ export default function Game() {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [gameState, chapter, triggerManifestation, playSound, lang]);
+  }, [gameState, chapter, triggerManifestation, playSound, lang, upgrades.oiledKeys]);
 
   // Game Loop
   useEffect(() => {
@@ -468,6 +513,8 @@ export default function Game() {
 
     const interval = setInterval(() => {
       setManifestations(prev => prev.filter(m => Date.now() - m.startTime < m.duration));
+
+      let censorGlitchTriggered = false;
 
       // Move enemies
       setEnemies(prev => {
@@ -478,8 +525,7 @@ export default function Game() {
           
           // Censor Effect: Deletes text if close
           if (e.type === 'censor' && e.x > 78 && Math.random() < 0.04) {
-            setTypedText(t => t.slice(0, -1));
-            playSound('glitch');
+            censorGlitchTriggered = true;
           }
 
           return { ...e, x: e.x + moveSpeed };
@@ -491,6 +537,11 @@ export default function Game() {
         
         return next;
       });
+
+      if (censorGlitchTriggered) {
+        setTypedText(t => t.slice(0, -1));
+        playSound('glitch');
+      }
 
       // Spawn enemies
       const spawnRate = (0.005 + chapterIndex * 0.006) * (1 - upgrades.soundProofing * 0.2);
@@ -528,7 +579,7 @@ export default function Game() {
       }
 
       // Check for victory
-      if (typedText.length >= chapter.text.length) {
+      if (typedText === chapter.text) {
         setGameState('victory');
         setRevolutionPoints(prev => prev + (chapter.id * 100));
         playSound('bell');
@@ -556,6 +607,11 @@ export default function Game() {
     setIsHeavy(false);
     setIsCold(false);
     setIsHeat(false);
+    setIsGravity(false);
+    setIsShielded(false);
+    setIsTimeSlowed(false);
+    setTotalKeystrokes(0);
+    setCorrectKeystrokes(0);
   };
 
   return (
@@ -594,6 +650,13 @@ export default function Game() {
                 {m.type === 'light' && <Sun className="text-yellow-200 w-24 h-24 animate-pulse blur-sm" />}
                 {m.type === 'ghost' && <Ghost className="text-white/40 w-20 h-20 animate-pulse" />}
                 {m.type === 'fire' && <Flame className="text-red-500 w-20 h-20 animate-bounce" />}
+                {m.type === 'heat' && <Flame className="text-orange-500 w-20 h-20 animate-pulse" />}
+                {m.type === 'heavy' && <Shield className="text-gray-400 w-20 h-20 animate-bounce" />}
+                {m.type === 'tangle' && <Wind className="text-emerald-400 w-16 h-16 animate-spin" />}
+                {m.type === 'blood' && <Droplets className="text-red-600 w-16 h-16 animate-pulse" />}
+                {m.type === 'mirror' && <Sun className="text-purple-300 w-20 h-20 animate-ping" />}
+                {m.type === 'time' && <Zap className="text-amber-300 w-16 h-16 animate-pulse" />}
+                {m.type === 'gravity' && <Wind className="text-cyan-400 w-16 h-16 animate-bounce" />}
                 {m.type === 'wall' && <div className="w-6 h-40 bg-gray-800 border-2 border-gray-600 rounded" />}
                 {m.type === 'cold' && <Snowflake className="text-blue-200 w-16 h-16 animate-spin-slow" />}
                 {m.type === 'shield' && <div className="w-32 h-32 border-4 border-blue-400/30 rounded-full animate-pulse" />}
@@ -657,7 +720,7 @@ export default function Game() {
               {(['en', 'sv', 'tr'] as Language[]).map(l => (
                 <button 
                   key={l}
-                  onClick={() => setLang(l)}
+                  onClick={() => handleLanguageChange(l)}
                   className={cn(
                     "px-2 py-1 text-[10px] border rounded transition-all",
                     lang === l ? "bg-[#f27d26] text-black border-[#f27d26]" : "border-white/20 hover:border-white/50"
@@ -670,7 +733,7 @@ export default function Game() {
             <div className="text-right">
               <div className="text-[10px] opacity-50 uppercase font-bold tracking-widest">{t.ui.points}: {revolutionPoints}</div>
               <div className="text-[8px] opacity-30 uppercase font-bold tracking-widest mt-1">
-                {t.ui.audio}: {audioCtxRef.current?.state === 'running' ? t.ui.active : t.ui.initAudio}
+                {t.ui.audio}: {isAudioRunning ? t.ui.active : t.ui.initAudio}
               </div>
             </div>
           </div>
@@ -870,7 +933,9 @@ export default function Game() {
           </div>
           <div className="space-y-2">
             <div className="text-[10px] uppercase opacity-50 font-bold tracking-widest">{t.ui.accuracy}</div>
-            <div className="text-3xl font-display italic text-white">98%</div>
+            <div className="text-3xl font-display italic text-white">
+              {totalKeystrokes > 0 ? `${Math.round((correctKeystrokes / totalKeystrokes) * 100)}%` : '100%'}
+            </div>
           </div>
           <div className="col-span-2 space-y-2">
             <div className="flex justify-between items-end">
