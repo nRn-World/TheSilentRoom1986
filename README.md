@@ -28,7 +28,6 @@ Steps, distance, goals and a leaderboard for the whole group, without anyone giv
 </tr>
 </table>
 
-<sub><i>Screenshots show the Swedish interface. The app ships in Swedish, Danish and English.</i></sub>
 
 <br />
 

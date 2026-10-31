@@ -24,34 +24,34 @@ const nav = box({ display: 'flex', flexDirection: 'column', borderBottom: '1px s
       T('step.by.step', { fontFamily: 'Outfit', fontWeight: 800, fontSize: 21, letterSpacing: '-1.4px', color: C.ink })
     ),
     box({ display: 'flex', alignItems: 'center', gap: 4, borderBottom: '1px solid #c8bdb5', paddingBottom: 3 },
-      T('Din integritet', { fontFamily: 'DM Sans', fontWeight: 800, fontSize: 10.5, color: '#38364a' }),
+      T('Your privacy', { fontFamily: 'DM Sans', fontWeight: 800, fontSize: 10.5, color: '#38364a' }),
       img(arrowUpRight('#e07153'), { width: 9, height: 9 }))
   ),
   box({ display: 'flex', gap: 3, marginBottom: 8, padding: 3, background: '#efece5', border: '1px solid #e3dfd5', borderRadius: 9, alignSelf: 'flex-start' },
-    pill('Svenska', 'sv', true), pill('Dansk', 'da', false), pill('English', 'en', false)),
-  T('EN BÄTTRE BIT PÅ VÄGEN.', { fontFamily: 'DM Sans', fontWeight: 800, fontSize: 9.5, letterSpacing: '1.3px', color: '#9d968e', paddingBottom: 11 })
+    pill('Svenska', 'sv', false), pill('Dansk', 'da', false), pill('English', 'en', true)),
+  T('A BETTER WAY FORWARD.', { fontFamily: 'DM Sans', fontWeight: 800, fontSize: 9.5, letterSpacing: '1.3px', color: '#9d968e', paddingBottom: 11 })
 );
 
 const hero = box({ display: 'flex', flexDirection: 'column', padding: '28px 26px 0' },
   box({ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 },
     img(star('#dda63c'), { width: 15, height: 15 }),
-    T('VÄLKOMMEN TILL STEP.BY.STEP', { fontFamily: 'DM Sans', fontWeight: 800, fontSize: 9.5, letterSpacing: '2px', color: '#9f6d57' })),
-  T('Det börjar', { fontFamily: 'Outfit', fontWeight: 700, fontSize: 46, lineHeight: '1', letterSpacing: '-3.2px', color: C.ink }),
+    T('WELCOME TO STEP.BY.STEP', { fontFamily: 'DM Sans', fontWeight: 800, fontSize: 9.5, letterSpacing: '2px', color: '#9f6d57' })),
+  T('It starts', { fontFamily: 'Outfit', fontWeight: 700, fontSize: 46, lineHeight: '1', letterSpacing: '-3.2px', color: C.ink }),
   box({ display: 'flex', alignItems: 'flex-end' },
-    T('med', { fontFamily: 'Outfit', fontWeight: 700, fontSize: 46, lineHeight: '1.05', letterSpacing: '-3.2px', color: C.ink, marginRight: 9 }),
-    T('ett steg.', { fontFamily: 'Outfit', fontWeight: 700, fontSize: 46, lineHeight: '1.05', letterSpacing: '-3.2px', color: C.coral })),
-  T('En liten promenad kan förändra en hel dag. Gå med din grupp, på det sätt som passar er.',
+    T('with', { fontFamily: 'Outfit', fontWeight: 700, fontSize: 46, lineHeight: '1.05', letterSpacing: '-3.2px', color: C.ink, marginRight: 9 }),
+    T('one step.', { fontFamily: 'Outfit', fontWeight: 700, fontSize: 46, lineHeight: '1.05', letterSpacing: '-3.2px', color: C.coral })),
+  T('A short walk can change the whole day. Walk with your group, in the way that suits you.',
     { fontFamily: 'DM Sans', fontWeight: 500, fontSize: 13.5, lineHeight: '1.7', color: C.body, marginTop: 12, maxWidth: 320 }),
   box({ display: 'flex', alignItems: 'center', gap: 6, marginTop: 14, paddingBottom: 2, borderBottom: '1px solid #b7a1c4', alignSelf: 'flex-start' },
-    T('Välj ditt läge', { fontFamily: 'DM Sans', fontWeight: 800, fontSize: 12, color: '#755b91' }),
+    T('Choose your mode', { fontFamily: 'DM Sans', fontWeight: 800, fontSize: 12, color: '#755b91' }),
     img(arrowDown('#755b91'), { width: 13, height: 13 })));
 
-const art = box({ display: 'flex', position: 'relative', height: 250, marginTop: 16, overflow: 'hidden' },
-  img(SCENE, { position: 'absolute', left: 0, top: 0, width: 390, height: 268 }),
+const art = box({ display: 'flex', position: 'relative', height: 236, marginTop: 16, overflow: 'hidden' },
+  img(SCENE, { position: 'absolute', left: 0, top: 0, width: 390, height: 236 }),
   box({ position: 'absolute', left: 25, top: 12, width: 84, height: 84, borderRadius: 42, border: '1.5px dashed #c07f6a', background: '#faf7ef', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1 },
-    T('UT & GÅ', { fontFamily: 'DM Sans', fontWeight: 800, fontSize: 7.5, letterSpacing: '.9px', color: '#936c60' }),
+    T('OUT & ABOUT', { fontFamily: 'DM Sans', fontWeight: 800, fontSize: 7.5, letterSpacing: '.9px', color: '#936c60' }),
     img(star('#dda63c'), { width: 17, height: 17 }),
-    T('I ER TAKT', { fontFamily: 'DM Sans', fontWeight: 800, fontSize: 7.5, letterSpacing: '.9px', color: '#936c60' }))
+    T('AT YOUR PACE', { fontFamily: 'DM Sans', fontWeight: 800, fontSize: 7.5, letterSpacing: '.9px', color: '#936c60' }))
 );
 
 const modeCard = (local) => box({ display: 'flex', flexDirection: 'column', background: local ? '#fff' : '#f1edf6', border: `1px solid ${local ? '#e8e4de' : '#e4dceb'}`, borderRadius: 13, padding: '15px 17px 0', boxShadow: '3px 5px 0 #3830440b' },
@@ -60,12 +60,12 @@ const modeCard = (local) => box({ display: 'flex', flexDirection: 'column', back
     box({ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: 12, background: local ? '#dce8d5' : '#e2d9ee' },
       img(icon(local ? 'Footprints' : 'Users', local ? '#647f60' : '#836ca5'), { width: 22, height: 22 }))),
   box({ display: 'flex', alignItems: 'center', gap: 5, marginTop: -4 },
-    T(local ? 'Vi går nära' : 'Vi går längre', { fontFamily: 'Outfit', fontWeight: 700, fontSize: 21, letterSpacing: '-.6px', color: C.ink }),
+    T(local ? 'Close by' : 'Together live', { fontFamily: 'Outfit', fontWeight: 700, fontSize: 21, letterSpacing: '-.6px', color: C.ink }),
     img(star('#dda63c'), { width: 12, height: 12 })),
-  T(local ? 'Gruppromenad utan konto, GPS eller serverlagring. Telefonerna delar steg direkt i närheten.' : 'Dela steg, mål och pepp med gruppen. Se hur många som är ute just nu, aldrig var de är.',
+  T(local ? 'Group walk without an account, GPS or server storage. The phones share steps right nearby.' : 'Share steps, goals and cheers with the group. See how many are out right now, never where they are.',
     { fontFamily: 'DM Sans', fontWeight: 500, fontSize: 11.5, lineHeight: '1.48', color: '#777377', marginTop: 6, marginBottom: 14 }),
   box({ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid #29283b16', padding: '11px 0' },
-    T(local ? 'Offline · utan GPS' : 'Tillsammans · live', { fontFamily: 'DM Sans', fontWeight: 800, fontSize: 10.5, color: local ? '#5f715d' : '#786493' }),
+    T(local ? 'Offline · no GPS' : 'Together · live', { fontFamily: 'DM Sans', fontWeight: 800, fontSize: 10.5, color: local ? '#5f715d' : '#786493' }),
     box({ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, borderRadius: 13, background: local ? '#e9eee5' : '#e6ddef' },
       img(arrowRight(local ? '#5f715d' : '#786493'), { width: 13, height: 13 })))
 );
@@ -74,8 +74,8 @@ const choices = box({ display: 'flex', flexDirection: 'column', padding: '26px 2
   box({ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 },
     h('div', { style: { width: 22, height: 2, background: '#d97158' } }),
     T('01 / 02', { fontFamily: 'DM Sans', fontWeight: 800, fontSize: 9.5, letterSpacing: '1.6px', color: '#bd7c62' })),
-  T('Hur vill ni gå?', { fontFamily: 'Outfit', fontWeight: 700, fontSize: 26, letterSpacing: '-1px', color: C.ink }),
-  T('Två vägar. Samma känsla av att komma någonstans.', { fontFamily: 'DM Sans', fontWeight: 500, fontSize: 11, lineHeight: '1.5', color: '#938b88', marginTop: 4, marginBottom: 12 }),
+  T('How do you want to walk?', { fontFamily: 'Outfit', fontWeight: 700, fontSize: 26, letterSpacing: '-1px', color: C.ink }),
+  T('Two roads. The same feeling of getting somewhere.', { fontFamily: 'DM Sans', fontWeight: 500, fontSize: 11, lineHeight: '1.5', color: '#938b88', marginTop: 4, marginBottom: 12 }),
   modeCard(true),
   box({ height: 11 }),
   modeCard(false)
@@ -85,10 +85,10 @@ const footer = box({ display: 'flex', flexDirection: 'column', gap: 8, padding: 
   box({ display: 'flex', alignItems: 'center', gap: 7 },
     img(star('#dda63c', 10), { width: 10, height: 10 }),
     box({ display: 'flex', flexDirection: 'column', alignItems: 'center' },
-      T('ETT STEG I TAGET,', { fontFamily: 'DM Sans', fontWeight: 800, fontSize: 9.5, letterSpacing: '1.1px', color: '#9b918b', lineHeight: '1.55' }),
-      T('TILLSAMMANS.', { fontFamily: 'DM Sans', fontWeight: 800, fontSize: 9.5, letterSpacing: '1.1px', color: '#9b918b', lineHeight: '1.55' }))),
-  T('Skapad av nrnworld.one / bynrnworld@gmail.com', { fontFamily: 'DM Sans', fontWeight: 500, fontSize: 10.5, color: '#8d887f' }),
-  T('Gjort för rörelse. Byggt med omtanke.', { fontFamily: 'DM Sans', fontWeight: 500, fontSize: 10.5, color: '#9b918b' })
+      T('ONE STEP AT A TIME,', { fontFamily: 'DM Sans', fontWeight: 800, fontSize: 9.5, letterSpacing: '1.1px', color: '#9b918b', lineHeight: '1.55' }),
+      T('TOGETHER.', { fontFamily: 'DM Sans', fontWeight: 800, fontSize: 9.5, letterSpacing: '1.1px', color: '#9b918b', lineHeight: '1.55' }))),
+  T('Created by nrnworld.one / bynrnworld@gmail.com', { fontFamily: 'DM Sans', fontWeight: 500, fontSize: 10.5, color: '#8d887f' }),
+  T('Made for movement. Built with care.', { fontFamily: 'DM Sans', fontWeight: 500, fontSize: 10.5, color: '#9b918b' })
 );
 
 const screen = box({ display: 'flex', flexDirection: 'column', width: 390, background: C.paper }, statusBar, nav, hero, art, choices, footer);

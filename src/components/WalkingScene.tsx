@@ -5,29 +5,29 @@ const TROUSER = '#f2e8d3';
 const BAG = '#f0e5d1';
 const FACE = '#3a3547';
 
-const TORSO = 'M-25 244C-31 256-32 292-31 316-31 327-17 333 0 333 17 333 31 327 31 316 32 292 31 256 25 244 16 239-16 239-25 244Z';
+const TORSO = 'M-26 244C-34 256-36 294-35 319-35 331-19 337 0 337 19 337 35 331 35 319 36 294 34 256 26 244 16 239-16 239-26 244Z';
 const ARMS = 'M-24 250C-33 262-39 274-38 285-38 293-41 298-45 301M24 250C33 262 39 274 38 287 38 295 41 301 45 305';
 const HANDS_BACK = { cx: -47, cy: 303 };
 const HANDS_FRONT = { cx: 47, cy: 307 };
 
 const splitPaths = (d: string) => d.split(' M').map((part, i) => (i ? `M${part}` : part));
-const FRINGE_BOB = 'M-44 206C-44 176-22 152 2 153 22 154 38 168 37 190 30 183 21 181 13 185 4 189-6 191-15 192-24 193-34 194-40 199-42 202-43 205-44 206Z';
-const FRINGE_CURLY = 'M-45 202C-45 172-22 150 2 151 22 152 38 166 37 188 29 181 21 179 13 183 4 187-6 189-15 190-24 191-35 192-41 196-43 198-44 200-45 202Z';
+const FRINGE_BOB = 'M-40 196C-39 168-19 152 2 153 22 154 38 168 37 190 30 185 22 184 14 187 6 190-4 192-12 192-20 193-30 194-40 196Z M-41 198C-44 214-43 228-40 238-39 242-34 243-32 238-29 226-28 212-30 198Z M41 198C44 214 43 228 40 238 39 242 34 243 32 238 29 226 28 212 30 198Z';
+const FRINGE_CURLY = 'M-42 194C-41 166-20 150 3 151 24 152 39 166 38 190 30 184 22 183 14 186 6 189-4 191-12 191-21 192-31 193-42 194Z M-42 196C-45 212-44 228-41 238-40 242-35 243-33 238-30 224-29 210-31 196Z M42 196C45 212 44 228 41 238 40 242 35 243 33 238 30 224 29 210 31 196Z';
 const FRINGE_SHORT = 'M-40 200C-40 174-20 154 2 155 21 156 36 168 35 186 27 180 19 178 11 182 3 186-6 188-14 189-22 190-33 190-38 195-39 197-40 199-40 200Z';
 
 function Legs() {
   return <>
-    <path d="M-8 328C-19 352-27 372-30 388M8 328C19 352 27 372 30 388" fill="none" stroke={LINE} strokeWidth="23" strokeLinecap="round"/>
-    <path d="M-8 328C-19 352-27 372-30 388M8 328C19 352 27 372 30 388" fill="none" stroke={TROUSER} strokeWidth="19" strokeLinecap="round"/>
-    <path d="M-44 386c-6 1-10 4-9 8 1 4 5 6 11 5l19-3c6-1 9-4 8-8-1-4-6-6-11-5Z" fill={SHOE} stroke={LINE} strokeWidth="2" strokeLinejoin="round"/>
-    <path d="M44 386c6 1 10 4 9 8-1 4-5 6-11 5l-19-3c-6-1-9-4-8-8 1-4 6-6 11-5Z" fill={SHOE} stroke={LINE} strokeWidth="2" strokeLinejoin="round"/>
+    <path d="M-8 328C-19 352-27 372-30 388M8 328C19 352 27 372 30 388" fill="none" stroke={LINE} strokeWidth="26" strokeLinecap="round"/>
+    <path d="M-8 328C-19 352-27 372-30 388M8 328C19 352 27 372 30 388" fill="none" stroke={TROUSER} strokeWidth="22" strokeLinecap="round"/>
+    <path d="M-40 386c-8 1-13 5-12 10 1 5 7 7 14 6l17-3c7-1 11-5 10-9-1-5-8-7-15-6Z" fill={SHOE} stroke={LINE} strokeWidth="2" strokeLinejoin="round"/>
+    <path d="M40 386c8 1 13 5 12 10-1 5-7 7-14 6l-17-3c-7-1-11-5-10-9 1-5 8-7 15-6Z" fill={SHOE} stroke={LINE} strokeWidth="2" strokeLinejoin="round"/>
   </>;
 }
 
 function Arms({ color }: { color: string }) {
   return <>
-    <path d={ARMS} fill="none" stroke={LINE} strokeWidth="19" strokeLinecap="round"/>
-    <path d={ARMS} fill="none" stroke={color} strokeWidth="15" strokeLinecap="round"/>
+    <path d={ARMS} fill="none" stroke={LINE} strokeWidth="21" strokeLinecap="round"/>
+    <path d={ARMS} fill="none" stroke={color} strokeWidth="17" strokeLinecap="round"/>
     <path d="M-41 294q4 5 8 4M41 296q4 5 8 4" fill="none" stroke={LINE} strokeWidth="1.8" strokeLinecap="round"/>
   </>;
 }
@@ -44,12 +44,12 @@ function Collar({ color }: { color: string }) {
 function Features({ mouth }: { mouth: string }) {
   return <>
     <circle cx="-13" cy="202" r="2.6" fill={FACE}/><circle cx="13" cy="202" r="2.6" fill={FACE}/>
-    <path d="M-8 215q8 7 16 0" fill="none" stroke={mouth} strokeWidth="2.1" strokeLinecap="round"/>
+    <path d="M-7 214q7 6 14 0" fill="none" stroke={mouth} strokeWidth="2.1" strokeLinecap="round"/>
   </>;
 }
 
 function Hand({ skin, x, y }: { skin: string; x: number; y: number }) {
-  return <ellipse cx={x} cy={y} rx="6" ry="7" fill={skin} transform={`rotate(${x < 0 ? -10 : 10} ${x} ${y})`}/>;
+  return <ellipse cx={x} cy={y} rx="7" ry="8" fill={skin} transform={`rotate(${x < 0 ? -10 : 10} ${x} ${y})`}/>;
 }
 
 type WalkerProps = {
@@ -75,8 +75,8 @@ function Walker({ className, cx, skin, shirt, hair, mouth, hairMass, fringe, cur
       <rect x="-8" y="218" width="16" height="32" fill={skin}/>
       {children}
       <Collar color={shirt}/>
-      <g fill={hair}><ellipse cx="0" cy="190" rx="38" ry="40"/>{hairMass.map(([hx, hy, r]) => <circle key={`${hx}:${hy}`} cx={hx} cy={hy} r={r}/>)}</g>
-      <ellipse cx="0" cy="200" rx="34" ry="35" fill={skin}/>
+      <g fill={hair}><ellipse cx="0" cy="189" rx="39" ry="41"/>{hairMass.map(([hx, hy, r]) => <circle key={`${hx}:${hy}`} cx={hx} cy={hy} r={r}/>)}</g>
+      <ellipse cx="0" cy="199" rx="35" ry="36" fill={skin}/>
       {fringe.map((d) => <path key={d.slice(0, 14)} d={d} fill={hair}/>)}
       {curls}
       <Features mouth={mouth}/>

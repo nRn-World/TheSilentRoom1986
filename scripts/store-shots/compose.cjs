@@ -49,7 +49,7 @@ function slide({ out, eyebrow, title, sub, screen, offsetCss = 0, accent = '#df7
     fs.writeFileSync(src, PNG.sync.write(cut));
   }
   const imgH = screenH;
-  const subY = () => (eyebrow ? (sub && sub.length > 1 ? 372 : 352) : 300);
+  const subY = () => (eyebrow ? (sub && sub.length > 1 ? 372 : 362) : 300);
 
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
   <defs>
