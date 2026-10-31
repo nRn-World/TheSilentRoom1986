@@ -1,40 +1,131 @@
-Creative Commons Attribution-NonCommercial 4.0 International Public License
+step.by.step Educational License
+Version 1.0
+Date: 31 October 2026
+Copyright (c) 2026 nrnworld.one. All rights reserved.
+Contact: https://nrnworld.one and bynrnworld@gmail.com
 
-Copyright (c) 2026 TheSilentRoom1986
+PLAIN SUMMARY
 
-By exercising the Licensed Rights (defined below), You accept and agree to be
-bound by the terms and conditions of this Creative Commons
-Attribution-NonCommercial 4.0 International Public License ("Public License").
+You may download, run, change and share this project free of charge for
+education and other noncommercial purposes. You may not sell it, and you may
+not earn money from it. If you want to use it commercially, you need a paid
+license agreed with nrnworld.one. This summary is only a help to understand the
+text. The terms below are the binding ones.
 
-You are free to:
-  Share — copy and redistribute the material in any medium or format
-  Adapt — remix, transform, and build upon the material
+1. SCOPE
 
-Under the following terms:
-  Attribution — You must give appropriate credit, provide a link to the license,
-  and indicate if changes were made. You may do so in any reasonable manner, but
-  not in any way that suggests the licensor endorses you or your use.
+This license covers all material in this project, both as a whole and in parts,
+referred to below as the Project:
 
-  NonCommercial — You may not use the material for commercial purposes.
+a) source code, scripts, configuration and build files
+b) interface, layout, animations and other design
+c) texts, translations and store material
+d) illustrations, icons, logo, app icon and other images
+e) documentation, including the README, this license and the privacy text
 
-  No additional restrictions — You may not apply legal terms or technological
-  measures that legally restrict others from doing anything the license permits.
+The license also applies if you use only a part of the Project, for example
+only the illustrations or only the texts.
 
-Notices:
-  You do not have to comply with the license for elements of the material in the
-  public domain or where your use is permitted by an applicable exception or
-  limitation.
+2. WHAT YOU MAY DO AT NO COST
 
-  No warranties are given. The license may not give you all of the permissions
-  necessary for your intended use. For example, other rights such as publicity,
-  privacy, or moral rights may limit how you use the material.
+You may, worldwide and without payment:
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+a) download and copy the Project
+b) run and use the Project, in a browser, as an installed app or in any other
+   way, for education and other noncommercial use
+c) change the Project and create your own versions
+d) share the Project and your changed versions, including publicly
 
-Full license: https://creativecommons.org/licenses/by-nc/4.0/legalcode
+Education and other noncommercial use includes, for example, pupils, students,
+teachers, schools, universities, study groups, nonprofit associations and
+private individuals who use the Project for their own learning or for a free
+group walk.
+
+3. WHAT YOU MAY NOT DO
+
+a) You may not sell the Project or any part of it.
+b) You may not earn money from the Project, directly or indirectly. This
+   includes, for example, paid apps, advertising, sponsorship, subscriptions,
+   paid courses, paid events, consulting work built on the Project, or placing
+   the Project inside a product or service that is sold.
+c) You may not charge others for access to the Project.
+d) You may not use the Project in advertising for your own business, or include
+   the Project in a commercial offering, without a written agreement.
+e) You may not publish the Project in an app store under the name step.by.step
+   or with the logo of the Project.
+
+4. COMMERCIAL USE
+
+Commercial use requires a paid license. Contact nrnworld.one at
+https://nrnworld.one or bynrnworld@gmail.com and describe what you want to do,
+and you will agree on scope, terms and price. No commercial use may begin
+before a written agreement exists.
+
+5. CONDITIONS THAT ALWAYS APPLY
+
+a) Attribution. You must clearly state that the Project was created by
+   nrnworld.one and link to https://nrnworld.one. This can be done on an about
+   page, in the README, in the footer of the app or in another clear place that
+   users see. You may not remove or hide the name of the author.
+b) Same terms. If you change the Project or share it onwards, this license must
+   follow, and anyone who receives your version gets the same rights and the
+   same limitations as you.
+c) Mark changes. If you change the Project, it must be clear that it is a
+   changed version and that nrnworld.one did not make those changes.
+d) Name and logo. The name step.by.step, the logo, the app icon and the
+   illustrations may be used together with the Project and under this license.
+   The name and the logo may not be used to suggest that nrnworld.one endorses
+   your version, your event or your business without written consent.
+e) No extra restrictions. You may not use technical measures, terms or
+   agreements that leave anyone with fewer rights than this license gives.
+f) Data protection. This license grants no right to collect personal data about
+   users. If you run your own version, you are responsible for following data
+   protection law, including the GDPR.
+
+6. COPYRIGHT
+
+All copyright and all rights not expressly granted in this license remain with
+nrnworld.one and with those who have contributed material. This license does not
+transfer copyright to you. By submitting a contribution to the Project you give
+nrnworld.one the right to use, change and publish that contribution under this
+license.
+
+7. WARRANTY AND LIABILITY
+
+The Project is provided as is, without warranty of any kind. This includes, for
+example, that it works without errors, that it fits a particular purpose, or
+that it does not infringe the rights of anyone else. nrnworld.one is not liable
+for lost data, lost profit, incorrect step counts or other damages that may
+arise from the use of the Project or from the inability to use it. You are
+responsible for how you use the Project and for following the laws and rules
+that apply where you use it.
+
+The Project uses third party libraries and fonts that carry their own licenses.
+They are not covered by this license and their terms apply alongside it.
+
+8. TERMINATION
+
+If you breach this license, your right to use the Project ends automatically.
+You must then stop using the Project and remove all copies and changed versions
+that you have shared. The right can be restored if nrnworld.one agrees in
+writing, or if you correct the breach within 30 days of learning about it.
+
+9. GOVERNING LAW AND DISPUTES
+
+This license is governed by the laws of Sweden. A dispute that cannot be settled
+in mutual agreement shall be decided by a Swedish court of general jurisdiction,
+with Stockholm District Court as the court of first instance.
+
+10. CONTACT AND RIGHTS
+
+If you want to use the Project in a way that is not covered here, if you want to
+buy a commercial license, or if you have questions about what is allowed,
+please get in touch:
+
+nrnworld.one
+https://nrnworld.one
+bynrnworld@gmail.com
+
+Attribution line to use:
+"step.by.step by nrnworld.one, used for education under the step.by.step
+Educational License. https://nrnworld.one"

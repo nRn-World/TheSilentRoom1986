@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">step.by.step</string>
+    <string name="title_activity_main">step.by.step</string>
+    <string name="package_name">app.stegvis.mobile</string>
+    <string name="custom_url_scheme">app.stegvis.mobile</string>
+</resources>

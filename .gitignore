@@ -6,3 +6,8 @@ coverage/
 *.log
 .env*
 !.env.example
+
+data/
+
+# Generated preview animation (kept in the workspace, not in Git)
+/art/walk-loop-preview.gif
